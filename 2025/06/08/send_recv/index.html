@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 7.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="1. 基本概念与进程组（group） group（通信组）：分布式通信时的「子集」，允许只在一部分 rank 之间通信。 global rank：全局进程编号（进程启动时分配的编号）。 group rank：组内进程编号，组内第几个进程（与 global rank 无必然对应关系）。 src&#x2F;dst：通信目标（源&#x2F;目的）rank，注意：如果指定 group，这里是组内编号，不">
+<meta property="og:type" content="article">
+<meta property="og:title" content="pytorch send recv 用法详解">
+<meta property="og:url" content="http://example.com/2025/06/08/send_recv/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="1. 基本概念与进程组（group） group（通信组）：分布式通信时的「子集」，允许只在一部分 rank 之间通信。 global rank：全局进程编号（进程启动时分配的编号）。 group rank：组内进程编号，组内第几个进程（与 global rank 无必然对应关系）。 src&#x2F;dst：通信目标（源&#x2F;目的）rank，注意：如果指定 group，这里是组内编号，不">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2025-06-08T09:51:32.353Z">
+<meta property="article:modified_time" content="2025-06-08T09:51:32.353Z">
+<meta property="article:author" content="John Doe">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://example.com/2025/06/08/send_recv/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+
+  <title>pytorch send recv 用法详解 | Hexo</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Hexo</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="th fa-fw"></i>Categories</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="tags fa-fw"></i>Tags</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="archive fa-fw"></i>Archives</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="user fa-fw"></i>About</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2025/06/08/send_recv/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="John Doe">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Hexo">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          pytorch send recv 用法详解
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2025-06-08 17:51:32" itemprop="dateCreated datePublished" datetime="2025-06-08T17:51:32+08:00">2025-06-08</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <hr>
+<h2 id="1-基本概念与进程组（group）"><a href="#1-基本概念与进程组（group）" class="headerlink" title="1. 基本概念与进程组（group）"></a>1. 基本概念与进程组（group）</h2><ul>
+<li><strong>group</strong>（通信组）：分布式通信时的「子集」，允许只在一部分 rank 之间通信。</li>
+<li><strong>global rank</strong>：全局进程编号（进程启动时分配的编号）。</li>
+<li><strong>group rank</strong>：组内进程编号，组内第几个进程（与 global rank 无必然对应关系）。</li>
+<li><strong>src&#x2F;dst</strong>：通信目标（源&#x2F;目的）rank，<strong>注意：如果指定 group，这里是组内编号，不是全局编号</strong>。</li>
+</ul>
+<h3 id="进程组举例"><a href="#进程组举例" class="headerlink" title="进程组举例"></a>进程组举例</h3><p>假如 group &#x3D; <code>[2, 4, 6, 8, 10]</code>：</p>
+<table>
+<thead>
+<tr>
+<th align="center">group_rank</th>
+<th align="center">global_rank</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">0</td>
+<td align="center">2</td>
+</tr>
+<tr>
+<td align="center">1</td>
+<td align="center">4</td>
+</tr>
+<tr>
+<td align="center">2</td>
+<td align="center">6</td>
+</tr>
+<tr>
+<td align="center">3</td>
+<td align="center">8</td>
+</tr>
+<tr>
+<td align="center">4</td>
+<td align="center">10</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="2-基本张量通信-API"><a href="#2-基本张量通信-API" class="headerlink" title="2. 基本张量通信 API"></a>2. 基本张量通信 API</h2><h3 id="2-1-send-recv-isend-irecv"><a href="#2-1-send-recv-isend-irecv" class="headerlink" title="2.1 send &#x2F; recv &#x2F; isend &#x2F; irecv"></a>2.1 send &#x2F; recv &#x2F; isend &#x2F; irecv</h3><h4 id="参数说明"><a href="#参数说明" class="headerlink" title="参数说明"></a>参数说明</h4><ul>
+<li><code>send(tensor, dst, group=None, tag=0)</code><br>发送 tensor 到组内 rank&#x3D;dst 的进程。</li>
+<li><code>recv(tensor, src, group=None, tag=0)</code><br>从组内 rank&#x3D;src 的进程接收 tensor。</li>
+<li><code>isend/irecv</code><br>异步版本，返回 Work 句柄，需要 <code>work.wait()</code>。</li>
+</ul>
+<h4 id="tag"><a href="#tag" class="headerlink" title="tag"></a>tag</h4><ul>
+<li><code>tag</code> 是<strong>消息编号&#x2F;标签</strong>，用于区分多条并发消息，只有 tag 一致才能正确配对。</li>
+</ul>
+<h4 id="group-dst-group-src"><a href="#group-dst-group-src" class="headerlink" title="group_dst&#x2F;group_src"></a>group_dst&#x2F;group_src</h4><ul>
+<li>一般不用手动传，框架会根据 dst&#x2F;src 和 group 自动推算。</li>
+</ul>
+<hr>
+<h3 id="2-2-通信流程示意图"><a href="#2-2-通信流程示意图" class="headerlink" title="2.2 通信流程示意图"></a>2.2 通信流程示意图</h3><h4 id="以-group-2-4-6-8-10-，让-rank-2-发，rank-10-收为例："><a href="#以-group-2-4-6-8-10-，让-rank-2-发，rank-10-收为例：" class="headerlink" title="以 group &#x3D; [2, 4, 6, 8, 10]，让 rank&#x3D;2 发，rank&#x3D;10 收为例："></a>以 group &#x3D; <code>[2, 4, 6, 8, 10]</code>，让 rank&#x3D;2 发，rank&#x3D;10 收为例：</h4><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">graph TD</span><br><span class="line">    subgraph group [group: [2, 4, 6, 8, 10]]</span><br><span class="line">        A[&quot;global_rank=2&lt;br&gt;group_rank=0&quot;]</span><br><span class="line">        B[&quot;global_rank=10&lt;br&gt;group_rank=4&quot;]</span><br><span class="line">    end</span><br><span class="line">    A -- send(tensor, dst=4, group=group) --&gt; B</span><br><span class="line">    B -- recv(tensor, src=0, group=group) --&gt; A</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>发送端（global_rank&#x3D;2，group_rank&#x3D;0）：<code>send(tensor, dst=4, group=group)</code></li>
+<li>接收端（global_rank&#x3D;10，group_rank&#x3D;4）：<code>recv(tensor, src=0, group=group)</code></li>
+</ul>
+<hr>
+<h3 id="2-3-代码实例"><a href="#2-3-代码实例" class="headerlink" title="2.3 代码实例"></a>2.3 代码实例</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 发送端（global_rank=2）</span></span><br><span class="line">group = dist.new_group([<span class="number">2</span>, <span class="number">4</span>, <span class="number">6</span>, <span class="number">8</span>, <span class="number">10</span>])</span><br><span class="line">tensor = torch.tensor([<span class="number">123</span>])</span><br><span class="line">dist.send(tensor, dst=<span class="number">4</span>, group=group)   <span class="comment"># dst=4 是 group 内 rank=4 → global_rank=10</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 接收端（global_rank=10）</span></span><br><span class="line">group = dist.new_group([<span class="number">2</span>, <span class="number">4</span>, <span class="number">6</span>, <span class="number">8</span>, <span class="number">10</span>])</span><br><span class="line">tensor = torch.zeros(<span class="number">1</span>, dtype=torch.<span class="built_in">int</span>)</span><br><span class="line">dist.recv(tensor, src=<span class="number">0</span>, group=group)   <span class="comment"># src=0 是 group 内 rank=0 → global_rank=2</span></span><br><span class="line"><span class="built_in">print</span>(tensor)</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>⚠️ <strong>只要用了 group，src&#x2F;dst 都是组内 rank，不是 global rank！</strong></p>
+</blockquote>
+<hr>
+<h3 id="2-4-异步通信（isend-irecv）"><a href="#2-4-异步通信（isend-irecv）" class="headerlink" title="2.4 异步通信（isend&#x2F;irecv）"></a>2.4 异步通信（isend&#x2F;irecv）</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">work = dist.isend(tensor, dst=<span class="number">4</span>, group=group)</span><br><span class="line">work.wait()  <span class="comment"># 等待发送完成</span></span><br></pre></td></tr></table></figure>
+
+<p>异步 recv 同理。</p>
+<hr>
+<h2 id="3-对象列表通信-API"><a href="#3-对象列表通信-API" class="headerlink" title="3. 对象列表通信 API"></a>3. 对象列表通信 API</h2><h3 id="3-1-send-object-list-recv-object-list-用法"><a href="#3-1-send-object-list-recv-object-list-用法" class="headerlink" title="3.1 send_object_list &#x2F; recv_object_list 用法"></a>3.1 send_object_list &#x2F; recv_object_list 用法</h3><ul>
+<li>用于发送&#x2F;接收包含任意 Python 对象的 list，底层通过序列化实现。</li>
+<li>发送过程拆为两步：先发每个对象序列化后的 size，再发所有内容拼接后的 tensor。</li>
+</ul>
+<hr>
+<h3 id="3-2-对象通信流程图"><a href="#3-2-对象通信流程图" class="headerlink" title="3.2 对象通信流程图"></a>3.2 对象通信流程图</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">sequenceDiagram</span><br><span class="line">    participant Sender</span><br><span class="line">    participant Receiver</span><br><span class="line">    Sender-&gt;&gt;Receiver: send(object_sizes_tensor)</span><br><span class="line">    Sender-&gt;&gt;Receiver: send(object_tensor)</span><br><span class="line">    Receiver-&gt;&gt;Receiver: 1. 读取 object_sizes_tensor</span><br><span class="line">    Receiver-&gt;&gt;Receiver: 2. 按 size 拆 object_tensor</span><br><span class="line">    Receiver-&gt;&gt;Receiver: 3. 反序列化为对象</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h3 id="3-3-典型代码示例"><a href="#3-3-典型代码示例" class="headerlink" title="3.3 典型代码示例"></a>3.3 典型代码示例</h3><h4 id="发送端"><a href="#发送端" class="headerlink" title="发送端"></a>发送端</h4><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">object_list = [<span class="string">&quot;hello&quot;</span>, <span class="number">123</span>, [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>]]</span><br><span class="line">dist.send_object_list(object_list, dst=<span class="number">4</span>, group=group)</span><br></pre></td></tr></table></figure>
+
+<h4 id="接收端"><a href="#接收端" class="headerlink" title="接收端"></a>接收端</h4><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">recv_list = [<span class="literal">None</span>, <span class="literal">None</span>, <span class="literal">None</span>]</span><br><span class="line">dist.recv_object_list(recv_list, src=<span class="number">0</span>, group=group)</span><br><span class="line"><span class="built_in">print</span>(recv_list)  <span class="comment"># [&#x27;hello&#x27;, 123, [1, 2, 3]]</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h3 id="3-4-接口实现核心代码"><a href="#3-4-接口实现核心代码" class="headerlink" title="3.4 接口实现核心代码"></a>3.4 接口实现核心代码</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 接收端分割反序列化</span></span><br><span class="line">offset = <span class="number">0</span></span><br><span class="line"><span class="keyword">for</span> i, obj_size <span class="keyword">in</span> <span class="built_in">enumerate</span>(object_sizes_tensor):</span><br><span class="line">    obj_view = object_tensor[offset : offset + obj_size]</span><br><span class="line">    object_list[i] = _tensor_to_object(obj_view, obj_size, group)</span><br><span class="line">    offset += obj_size</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>object_sizes_tensor</code> 记录每个对象的序列化长度</li>
+<li><code>object_tensor</code> 是所有内容拼起来的一维 tensor</li>
+<li>按顺序切片和反序列化，填回 object_list</li>
+</ul>
+<hr>
+<h3 id="3-5-关于-rank-objects"><a href="#3-5-关于-rank-objects" class="headerlink" title="3.5 关于 rank_objects"></a>3.5 关于 rank_objects</h3><ul>
+<li><code>rank_objects</code> 是 <code>recv</code> 的返回值，表示消息来自哪个 rank（一般等于 src）</li>
+<li>在多对多通信或 src&#x3D;ANY_SOURCE 时用来确认消息来源，和实际对象内容还原无关</li>
+</ul>
+<hr>
+<h2 id="4-group、src-dst、group-src-group-dst-参数关系"><a href="#4-group、src-dst、group-src-group-dst-参数关系" class="headerlink" title="4. group、src&#x2F;dst、group_src&#x2F;group_dst 参数关系"></a>4. group、src&#x2F;dst、group_src&#x2F;group_dst 参数关系</h2><ul>
+<li><p><strong>group</strong> 决定通信子集，src&#x2F;dst 决定收发目标编号。</p>
+</li>
+<li><p>如果指定 group，则 src&#x2F;dst 为<strong>组内 rank</strong>，不是 global rank。</p>
+</li>
+<li><p>group_src&#x2F;group_dst 一般不用手动传，框架自动推算。</p>
+</li>
+<li><p>映射关系：</p>
+<ul>
+<li>全局转组内：<code>group_ranks.index(global_rank)</code></li>
+<li>组内转全局：<code>group_ranks[group_rank]</code></li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2 id="5-易错点-常见问题"><a href="#5-易错点-常见问题" class="headerlink" title="5. 易错点 &amp; 常见问题"></a>5. 易错点 &amp; 常见问题</h2><ul>
+<li>只要用了 group，src&#x2F;dst 都是<strong>组内 rank</strong>，不是 global rank。</li>
+<li>tag 用于区分多条消息，必须 send 和 recv 一致。</li>
+<li>send_object_list&#x2F;recv_object_list 必须 object_list 长度、顺序一致。</li>
+<li>group_src&#x2F;group_dst 正常业务不需要自己传。</li>
+</ul>
+<hr>
+<h2 id="6-总结"><a href="#6-总结" class="headerlink" title="6. 总结"></a>6. 总结</h2><ul>
+<li><strong>张量通信</strong>：<code>send/recv/isend/irecv</code></li>
+<li><strong>对象通信</strong>：<code>send_object_list/recv_object_list</code></li>
+<li><strong>group</strong> 用于限定通信范围，<strong>src&#x2F;dst</strong> 传组内编号</li>
+<li><strong>tag</strong> 匹配消息</li>
+<li><strong>rank_objects</strong> 只是 recv 的返回值，表示消息实际来源，无需特殊处理</li>
+</ul>
+<hr>
+<h2 id="7-参考资料"><a href="#7-参考资料" class="headerlink" title="7. 参考资料"></a>7. 参考资料</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/distributed.html">PyTorch Distributed 官方文档</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/pytorch/pytorch/blob/main/torch/distributed/distributed_c10d.py">PyTorch distributed_c10d.py 源码</a></li>
+</ul>
+<hr>
+<p>如果觉得有用欢迎点赞&#x2F;收藏，有问题也欢迎留言交流！</p>
+<hr>
+<p><strong>补充说明</strong></p>
+<ul>
+<li>上述 Mermaid 流程图可用 <a target="_blank" rel="noopener" href="https://mermaid-js.github.io/mermaid-live-editor/">Mermaid Live Editor</a> 或支持 Mermaid 的 Markdown 编辑器直接渲染。</li>
+<li>代码块中的 <code>group</code> 可以多次使用同一个对象，建议放到全局只初始化一次（实际项目中推荐用 <code>torch.distributed</code> 的全局 group 管理方案）。</li>
+</ul>
+<hr>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2025/03/07/AI%E5%85%A5%E9%97%A8/" rel="prev" title="AI入门">
+      <i class="fa fa-chevron-left"></i> AI入门
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5%E4%B8%8E%E8%BF%9B%E7%A8%8B%E7%BB%84%EF%BC%88group%EF%BC%89"><span class="nav-number">1.</span> <span class="nav-text">1. 基本概念与进程组（group）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E7%BB%84%E4%B8%BE%E4%BE%8B"><span class="nav-number">1.1.</span> <span class="nav-text">进程组举例</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E5%9F%BA%E6%9C%AC%E5%BC%A0%E9%87%8F%E9%80%9A%E4%BF%A1-API"><span class="nav-number">2.</span> <span class="nav-text">2. 基本张量通信 API</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-send-recv-isend-irecv"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 send &#x2F; recv &#x2F; isend &#x2F; irecv</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8F%82%E6%95%B0%E8%AF%B4%E6%98%8E"><span class="nav-number">2.1.1.</span> <span class="nav-text">参数说明</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#tag"><span class="nav-number">2.1.2.</span> <span class="nav-text">tag</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#group-dst-group-src"><span class="nav-number">2.1.3.</span> <span class="nav-text">group_dst&#x2F;group_src</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E9%80%9A%E4%BF%A1%E6%B5%81%E7%A8%8B%E7%A4%BA%E6%84%8F%E5%9B%BE"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 通信流程示意图</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%BB%A5-group-2-4-6-8-10-%EF%BC%8C%E8%AE%A9-rank-2-%E5%8F%91%EF%BC%8Crank-10-%E6%94%B6%E4%B8%BA%E4%BE%8B%EF%BC%9A"><span class="nav-number">2.2.1.</span> <span class="nav-text">以 group &#x3D; [2, 4, 6, 8, 10]，让 rank&#x3D;2 发，rank&#x3D;10 收为例：</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E4%BB%A3%E7%A0%81%E5%AE%9E%E4%BE%8B"><span class="nav-number">2.3.</span> <span class="nav-text">2.3 代码实例</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-%E5%BC%82%E6%AD%A5%E9%80%9A%E4%BF%A1%EF%BC%88isend-irecv%EF%BC%89"><span class="nav-number">2.4.</span> <span class="nav-text">2.4 异步通信（isend&#x2F;irecv）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E5%AF%B9%E8%B1%A1%E5%88%97%E8%A1%A8%E9%80%9A%E4%BF%A1-API"><span class="nav-number">3.</span> <span class="nav-text">3. 对象列表通信 API</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-send-object-list-recv-object-list-%E7%94%A8%E6%B3%95"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 send_object_list &#x2F; recv_object_list 用法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E5%AF%B9%E8%B1%A1%E9%80%9A%E4%BF%A1%E6%B5%81%E7%A8%8B%E5%9B%BE"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 对象通信流程图</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E5%85%B8%E5%9E%8B%E4%BB%A3%E7%A0%81%E7%A4%BA%E4%BE%8B"><span class="nav-number">3.3.</span> <span class="nav-text">3.3 典型代码示例</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8F%91%E9%80%81%E7%AB%AF"><span class="nav-number">3.3.1.</span> <span class="nav-text">发送端</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%8E%A5%E6%94%B6%E7%AB%AF"><span class="nav-number">3.3.2.</span> <span class="nav-text">接收端</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-%E6%8E%A5%E5%8F%A3%E5%AE%9E%E7%8E%B0%E6%A0%B8%E5%BF%83%E4%BB%A3%E7%A0%81"><span class="nav-number">3.4.</span> <span class="nav-text">3.4 接口实现核心代码</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-5-%E5%85%B3%E4%BA%8E-rank-objects"><span class="nav-number">3.5.</span> <span class="nav-text">3.5 关于 rank_objects</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-group%E3%80%81src-dst%E3%80%81group-src-group-dst-%E5%8F%82%E6%95%B0%E5%85%B3%E7%B3%BB"><span class="nav-number">4.</span> <span class="nav-text">4. group、src&#x2F;dst、group_src&#x2F;group_dst 参数关系</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-%E6%98%93%E9%94%99%E7%82%B9-%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98"><span class="nav-number">5.</span> <span class="nav-text">5. 易错点 &amp; 常见问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-%E6%80%BB%E7%BB%93"><span class="nav-number">6.</span> <span class="nav-text">6. 总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="nav-number">7.</span> <span class="nav-text">7. 参考资料</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">John Doe</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">3</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">浙ICP备2024078386号 </a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">John Doe</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
