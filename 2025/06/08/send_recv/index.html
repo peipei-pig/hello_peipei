@@ -20,15 +20,15 @@
     var CONFIG = {"hostname":"example.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
   </script>
 
-  <meta name="description" content="1. 基本概念与进程组（group） group（通信组）：分布式通信时的「子集」，允许只在一部分 rank 之间通信。 global rank：全局进程编号（进程启动时分配的编号）。 group rank：组内进程编号，组内第几个进程（与 global rank 无必然对应关系）。 src&#x2F;dst：通信目标（源&#x2F;目的）rank，注意：如果指定 group，这里是组内编号，不">
+  <meta name="description" content="目录 1. 基本概念与进程组（group） 2. 基本张量通信 API 2.1 send &#x2F; recv &#x2F; isend &#x2F; irecv 2.2 通信流程示意图 2.3 代码实例 2.4 异步通信（isend&#x2F;irecv）   3. 对象列表通信 API 3.1 send_object_list &#x2F; recv_object_list 用法 3.2 对">
 <meta property="og:type" content="article">
 <meta property="og:title" content="pytorch send recv 用法详解">
 <meta property="og:url" content="http://example.com/2025/06/08/send_recv/index.html">
 <meta property="og:site_name" content="Hexo">
-<meta property="og:description" content="1. 基本概念与进程组（group） group（通信组）：分布式通信时的「子集」，允许只在一部分 rank 之间通信。 global rank：全局进程编号（进程启动时分配的编号）。 group rank：组内进程编号，组内第几个进程（与 global rank 无必然对应关系）。 src&#x2F;dst：通信目标（源&#x2F;目的）rank，注意：如果指定 group，这里是组内编号，不">
+<meta property="og:description" content="目录 1. 基本概念与进程组（group） 2. 基本张量通信 API 2.1 send &#x2F; recv &#x2F; isend &#x2F; irecv 2.2 通信流程示意图 2.3 代码实例 2.4 异步通信（isend&#x2F;irecv）   3. 对象列表通信 API 3.1 send_object_list &#x2F; recv_object_list 用法 3.2 对">
 <meta property="og:locale" content="en_US">
-<meta property="article:published_time" content="2025-06-08T09:53:41.674Z">
-<meta property="article:modified_time" content="2025-06-08T09:53:41.674Z">
+<meta property="article:published_time" content="2025-06-08T10:08:02.191Z">
+<meta property="article:modified_time" content="2025-06-08T10:08:02.191Z">
 <meta property="article:author" content="John Doe">
 <meta name="twitter:card" content="summary">
 
@@ -188,7 +188,7 @@
               </span>
               <span class="post-meta-item-text">Posted on</span>
 
-              <time title="Created: 2025-06-08 17:53:41" itemprop="dateCreated datePublished" datetime="2025-06-08T17:53:41+08:00">2025-06-08</time>
+              <time title="Created: 2025-06-08 18:08:02" itemprop="dateCreated datePublished" datetime="2025-06-08T18:08:02+08:00">2025-06-08</time>
             </span>
 
           
@@ -202,7 +202,42 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <hr>
+        <h2 id="目录"><a href="#目录" class="headerlink" title="目录"></a>目录</h2><ul>
+<li><a href="#1-%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5%E4%B8%8E%E8%BF%9B%E7%A8%8B%E7%BB%84group">1. 基本概念与进程组（group）</a></li>
+<li><a href="#2-%E5%9F%BA%E6%9C%AC%E5%BC%A0%E9%87%8F%E9%80%9A%E4%BF%A1-api">2. 基本张量通信 API</a><ul>
+<li><a href="#21-send--recv--isend--irecv">2.1 send &#x2F; recv &#x2F; isend &#x2F; irecv</a></li>
+<li><a href="#22-%E9%80%9A%E4%BF%A1%E6%B5%81%E7%A8%8B%E7%A4%BA%E6%84%8F%E5%9B%BE">2.2 通信流程示意图</a></li>
+<li><a href="#23-%E4%BB%A3%E7%A0%81%E5%AE%9E%E4%BE%8B">2.3 代码实例</a></li>
+<li><a href="#24-%E5%BC%82%E6%AD%A5%E9%80%9A%E4%BF%A1isendirecv">2.4 异步通信（isend&#x2F;irecv）</a></li>
+</ul>
+</li>
+<li><a href="#3-%E5%AF%B9%E8%B1%A1%E5%88%97%E8%A1%A8%E9%80%9A%E4%BF%A1-api">3. 对象列表通信 API</a><ul>
+<li><a href="#31-send_object_list--recv_object_list-%E7%94%A8%E6%B3%95">3.1 send_object_list &#x2F; recv_object_list 用法</a></li>
+<li><a href="#32-%E5%AF%B9%E8%B1%A1%E9%80%9A%E4%BF%A1%E6%B5%81%E7%A8%8B%E5%9B%BE">3.2 对象通信流程图</a></li>
+<li><a href="#33-%E5%85%B8%E5%9E%8B%E4%BB%A3%E7%A0%81%E7%A4%BA%E4%BE%8B">3.3 典型代码示例</a></li>
+<li><a href="#34-%E6%8E%A5%E5%8F%A3%E5%AE%9E%E7%8E%B0%E6%A0%B8%E5%BF%83%E4%BB%A3%E7%A0%81">3.4 接口实现核心代码</a></li>
+<li><a href="#35-%E5%85%B3%E4%BA%8E-rank_objects">3.5 关于 rank_objects</a></li>
+</ul>
+</li>
+<li><a href="#4-groupsrcdstgroup_srcgroup_dst-%E5%8F%82%E6%95%B0%E5%85%B3%E7%B3%BB">4. group、src&#x2F;dst、group_src&#x2F;group_dst 参数关系</a></li>
+<li><a href="#5-%E6%98%93%E9%94%99%E7%82%B9--%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98">5. 易错点 &amp; 常见问题</a></li>
+<li><a href="#6-%E6%80%BB%E7%BB%93">6. 总结</a></li>
+<li><a href="#7-%E6%89%B9%E9%87%8F%E7%82%B9%E5%AF%B9%E7%82%B9%E9%80%9A%E4%BF%A1%E6%8E%A5%E5%8F%A3batch_isend_irecv">7. 批量点对点通信接口：batch_isend_irecv</a><ul>
+<li><a href="#71-%E6%8E%A5%E5%8F%A3%E7%AE%80%E4%BB%8B">7.1 接口简介</a></li>
+<li><a href="#72-%E5%85%B8%E5%9E%8B%E4%BD%BF%E7%94%A8%E5%9C%BA%E6%99%AF">7.2 典型使用场景</a></li>
+<li><a href="#73-%E8%B0%83%E7%94%A8%E6%B5%81%E7%A8%8B%E4%B8%8E%E5%8F%82%E6%95%B0%E8%AF%B4%E6%98%8E">7.3 调用流程与参数说明</a></li>
+<li><a href="#74-%E4%BB%A3%E7%A0%81%E5%AE%9E%E4%BE%8B">7.4 代码实例</a></li>
+<li><a href="#75-%E9%80%9A%E4%BF%A1%E6%B5%81%E7%A8%8B%E5%9B%BE">7.5 通信流程图</a></li>
+<li><a href="#76-%E9%87%8D%E8%A6%81%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9">7.6 重要注意事项</a></li>
+<li><a href="#77-%E6%BA%90%E7%A0%81%E5%AE%9E%E7%8E%B0%E8%A6%81%E7%82%B9">7.7 源码实现要点</a></li>
+<li><a href="#78-api-%E6%96%87%E6%A1%A3%E9%93%BE%E6%8E%A5">7.8 API 文档链接</a></li>
+</ul>
+</li>
+<li><a href="#8-%E6%80%BB%E7%BB%93%E8%A1%A5%E5%85%85%E5%90%AB%E6%9C%AC%E8%8A%82%E4%B8%8E%E5%89%8D%E6%96%87%E6%80%BB%E8%A7%88">8. 总结补充</a></li>
+<li><a href="#9-%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99">9. 参考资料</a></li>
+</ul>
+<hr>
+<hr>
 <h2 id="1-基本概念与进程组（group）"><a href="#1-基本概念与进程组（group）" class="headerlink" title="1. 基本概念与进程组（group）"></a>1. 基本概念与进程组（group）</h2><ul>
 <li><strong>group</strong>（通信组）：分布式通信时的「子集」，允许只在一部分 rank 之间通信。</li>
 <li><strong>global rank</strong>：全局进程编号（进程启动时分配的编号）。</li>
@@ -324,7 +359,70 @@
 <li><strong>rank_objects</strong> 只是 recv 的返回值，表示消息实际来源，无需特殊处理</li>
 </ul>
 <hr>
-<h2 id="7-参考资料"><a href="#7-参考资料" class="headerlink" title="7. 参考资料"></a>7. 参考资料</h2><ul>
+<p>当然可以！下面是<strong>PyTorch 分布式批量点对点通信接口</strong> <code>batch_isend_irecv</code> 的<strong>Markdown风格整理</strong>，包含接口说明、用法、典型代码示例、参数讲解、原理流程图，风格和上文保持一致。</p>
+<hr>
+<h2 id="7-批量点对点通信接口：batch-isend-irecv"><a href="#7-批量点对点通信接口：batch-isend-irecv" class="headerlink" title="7. 批量点对点通信接口：batch_isend_irecv"></a>7. 批量点对点通信接口：<code>batch_isend_irecv</code></h2><h3 id="7-1-接口简介"><a href="#7-1-接口简介" class="headerlink" title="7.1 接口简介"></a>7.1 接口简介</h3><p><code>torch.distributed.batch_isend_irecv</code> 支持<strong>同时发起多组异步点对点通信操作</strong>（isend&#x2F;irecv），显著提高大批量数据分发&#x2F;收集的效率。<br>底层支持 NCCL、Gloo、UCC 等分布式后端，常用于分布式深度学习的 pipeline&#x2F;通信 pattern 优化。</p>
+<h4 id="函数签名"><a href="#函数签名" class="headerlink" title="函数签名"></a>函数签名</h4><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">torch.distributed.batch_isend_irecv(p2p_op_list: <span class="built_in">list</span>[P2POp]) -&gt; <span class="built_in">list</span>[Work]</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>p2p_op_list</strong>：一组 <code>torch.distributed.P2POp</code> 实例，每个实例描述一次 isend&#x2F;irecv。</li>
+<li>返回：所有操作的 request 句柄（Work 对象）列表，可通过 <code>.wait()</code> 同步。</li>
+</ul>
+<hr>
+<h3 id="7-2-典型使用场景"><a href="#7-2-典型使用场景" class="headerlink" title="7.2 典型使用场景"></a>7.2 典型使用场景</h3><ul>
+<li><strong>大批量点对点通信</strong>，例如 pipeline 并行、环形 allreduce 手写优化等场景。</li>
+<li>支持 isend&#x2F;irecv 混合，能批量提升吞吐量。</li>
+</ul>
+<hr>
+<h3 id="7-3-调用流程与参数说明"><a href="#7-3-调用流程与参数说明" class="headerlink" title="7.3 调用流程与参数说明"></a>7.3 调用流程与参数说明</h3><h4 id="P2POp-用法"><a href="#P2POp-用法" class="headerlink" title="P2POp 用法"></a>P2POp 用法</h4><p>每个 P2POp 定义一次通信操作，如下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">P2POp(op, tensor, peer, group=<span class="literal">None</span>, tag=<span class="number">0</span>)</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>op</strong>：操作类型（<code>dist.isend</code> 或 <code>dist.irecv</code>）</li>
+<li><strong>tensor</strong>：要发送&#x2F;接收的 tensor</li>
+<li><strong>peer</strong>：目标 peer 的编号（组内 rank）</li>
+<li><strong>group</strong>（可选）：通信组（默认为 world）</li>
+<li><strong>tag</strong>（可选）：消息编号&#x2F;标签</li>
+</ul>
+<hr>
+<h3 id="7-4-代码实例"><a href="#7-4-代码实例" class="headerlink" title="7.4 代码实例"></a>7.4 代码实例</h3><p>假设 world_size&#x3D;2，rank 0 和 rank 1 做一个环形通信：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> torch</span><br><span class="line"><span class="keyword">import</span> torch.distributed <span class="keyword">as</span> dist</span><br><span class="line"></span><br><span class="line">rank = dist.get_rank()</span><br><span class="line">world_size = dist.get_world_size()</span><br><span class="line"></span><br><span class="line">send_tensor = torch.arange(<span class="number">2</span>, dtype=torch.float32) + <span class="number">2</span> * rank</span><br><span class="line">recv_tensor = torch.zeros(<span class="number">2</span>, dtype=torch.float32)</span><br><span class="line"></span><br><span class="line">send_op = dist.P2POp(dist.isend, send_tensor, (rank + <span class="number">1</span>) % world_size)</span><br><span class="line">recv_op = dist.P2POp(dist.irecv, recv_tensor, (rank - <span class="number">1</span> + world_size) % world_size)</span><br><span class="line"></span><br><span class="line">reqs = dist.batch_isend_irecv([send_op, recv_op])</span><br><span class="line"><span class="keyword">for</span> req <span class="keyword">in</span> reqs:</span><br><span class="line">    req.wait()</span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&quot;Rank <span class="subst">&#123;rank&#125;</span> 收到: <span class="subst">&#123;recv_tensor&#125;</span>&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<p><strong>运行结果：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Rank 0 收到: tensor([2., 3.])</span><br><span class="line">Rank 1 收到: tensor([0., 1.])</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h3 id="7-5-通信流程图"><a href="#7-5-通信流程图" class="headerlink" title="7.5 通信流程图"></a>7.5 通信流程图</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">sequenceDiagram</span><br><span class="line">    participant Rank0</span><br><span class="line">    participant Rank1</span><br><span class="line">    Rank0-&gt;&gt;Rank1: isend(send_tensor, dst=1)</span><br><span class="line">    Rank1-&gt;&gt;Rank0: isend(send_tensor, dst=0)</span><br><span class="line">    Rank0-&gt;&gt;Rank0: irecv(recv_tensor, src=1)</span><br><span class="line">    Rank1-&gt;&gt;Rank1: irecv(recv_tensor, src=0)</span><br><span class="line">    Note over Rank0,Rank1: batch_isend_irecv([send_op, recv_op])&lt;br&gt;并发发起通信并等待完成</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h3 id="7-6-重要注意事项"><a href="#7-6-重要注意事项" class="headerlink" title="7.6 重要注意事项"></a>7.6 重要注意事项</h3><blockquote>
+<p><strong>注意</strong></p>
+<ul>
+<li>如果使用 NCCL 后端，必须提前用 <code>torch.cuda.set_device</code> 设置好当前 GPU！</li>
+<li>如果这是某个 group 的<strong>第一次通信</strong>，group 里的所有 rank 必须都调用 <code>batch_isend_irecv</code>，否则行为未定义。</li>
+<li>以后只要不是第一次 collective，允许只用部分 rank 参与。</li>
+</ul>
+</blockquote>
+<hr>
+<h3 id="7-7-源码实现要点"><a href="#7-7-源码实现要点" class="headerlink" title="7.7 源码实现要点"></a>7.7 源码实现要点</h3><ul>
+<li>自动判断通信后端是否支持<strong>操作合并</strong>（coalescing），如 NCCL 会在同一个上下文下批量启动，提升性能。</li>
+<li>返回所有 request（Work）对象，用户可 <code>wait()</code>。</li>
+</ul>
+<hr>
+<h3 id="7-8-API-文档链接"><a href="#7-8-API-文档链接" class="headerlink" title="7.8 API 文档链接"></a>7.8 API 文档链接</h3><ul>
+<li><a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/distributed.html#torch.distributed.batch_isend_irecv">PyTorch 官方 batch_isend_irecv 文档</a></li>
+<li><a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/distributed.html#torch.distributed.P2POp">P2POp 官方说明</a></li>
+</ul>
+<hr>
+<h2 id="8-总结补充（含本节与前文总览）"><a href="#8-总结补充（含本节与前文总览）" class="headerlink" title="8. 总结补充（含本节与前文总览）"></a>8. 总结补充（含本节与前文总览）</h2><ul>
+<li>张量点对点通信：<code>send/recv/isend/irecv/batch_isend_irecv</code></li>
+<li>对象通信：<code>send_object_list/recv_object_list</code></li>
+<li>批量点对点通信能极大提升 pipeline 通信效率</li>
+<li>统一返回 Work 句柄，支持同步或异步</li>
+<li>group&#x2F;src&#x2F;dst 使用方式同上文描述</li>
+</ul>
+<hr>
+<h2 id="9-参考资料"><a href="#9-参考资料" class="headerlink" title="9. 参考资料"></a>9. 参考资料</h2><ul>
 <li><a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/distributed.html">PyTorch Distributed 官方文档</a></li>
 <li><a target="_blank" rel="noopener" href="https://github.com/pytorch/pytorch/blob/main/torch/distributed/distributed_c10d.py">PyTorch distributed_c10d.py 源码</a></li>
 </ul>
@@ -406,7 +504,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5%E4%B8%8E%E8%BF%9B%E7%A8%8B%E7%BB%84%EF%BC%88group%EF%BC%89"><span class="nav-number">1.</span> <span class="nav-text">1. 基本概念与进程组（group）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E7%BB%84%E4%B8%BE%E4%BE%8B"><span class="nav-number">1.1.</span> <span class="nav-text">进程组举例</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E5%9F%BA%E6%9C%AC%E5%BC%A0%E9%87%8F%E9%80%9A%E4%BF%A1-API"><span class="nav-number">2.</span> <span class="nav-text">2. 基本张量通信 API</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-send-recv-isend-irecv"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 send &#x2F; recv &#x2F; isend &#x2F; irecv</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8F%82%E6%95%B0%E8%AF%B4%E6%98%8E"><span class="nav-number">2.1.1.</span> <span class="nav-text">参数说明</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#tag"><span class="nav-number">2.1.2.</span> <span class="nav-text">tag</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#group-dst-group-src"><span class="nav-number">2.1.3.</span> <span class="nav-text">group_dst&#x2F;group_src</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E9%80%9A%E4%BF%A1%E6%B5%81%E7%A8%8B%E7%A4%BA%E6%84%8F%E5%9B%BE"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 通信流程示意图</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%BB%A5-group-2-4-6-8-10-%EF%BC%8C%E8%AE%A9-rank-2-%E5%8F%91%EF%BC%8Crank-10-%E6%94%B6%E4%B8%BA%E4%BE%8B%EF%BC%9A"><span class="nav-number">2.2.1.</span> <span class="nav-text">以 group &#x3D; [2, 4, 6, 8, 10]，让 rank&#x3D;2 发，rank&#x3D;10 收为例：</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E4%BB%A3%E7%A0%81%E5%AE%9E%E4%BE%8B"><span class="nav-number">2.3.</span> <span class="nav-text">2.3 代码实例</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-%E5%BC%82%E6%AD%A5%E9%80%9A%E4%BF%A1%EF%BC%88isend-irecv%EF%BC%89"><span class="nav-number">2.4.</span> <span class="nav-text">2.4 异步通信（isend&#x2F;irecv）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E5%AF%B9%E8%B1%A1%E5%88%97%E8%A1%A8%E9%80%9A%E4%BF%A1-API"><span class="nav-number">3.</span> <span class="nav-text">3. 对象列表通信 API</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-send-object-list-recv-object-list-%E7%94%A8%E6%B3%95"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 send_object_list &#x2F; recv_object_list 用法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E5%AF%B9%E8%B1%A1%E9%80%9A%E4%BF%A1%E6%B5%81%E7%A8%8B%E5%9B%BE"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 对象通信流程图</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E5%85%B8%E5%9E%8B%E4%BB%A3%E7%A0%81%E7%A4%BA%E4%BE%8B"><span class="nav-number">3.3.</span> <span class="nav-text">3.3 典型代码示例</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8F%91%E9%80%81%E7%AB%AF"><span class="nav-number">3.3.1.</span> <span class="nav-text">发送端</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%8E%A5%E6%94%B6%E7%AB%AF"><span class="nav-number">3.3.2.</span> <span class="nav-text">接收端</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-%E6%8E%A5%E5%8F%A3%E5%AE%9E%E7%8E%B0%E6%A0%B8%E5%BF%83%E4%BB%A3%E7%A0%81"><span class="nav-number">3.4.</span> <span class="nav-text">3.4 接口实现核心代码</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-5-%E5%85%B3%E4%BA%8E-rank-objects"><span class="nav-number">3.5.</span> <span class="nav-text">3.5 关于 rank_objects</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-group%E3%80%81src-dst%E3%80%81group-src-group-dst-%E5%8F%82%E6%95%B0%E5%85%B3%E7%B3%BB"><span class="nav-number">4.</span> <span class="nav-text">4. group、src&#x2F;dst、group_src&#x2F;group_dst 参数关系</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-%E6%98%93%E9%94%99%E7%82%B9-%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98"><span class="nav-number">5.</span> <span class="nav-text">5. 易错点 &amp; 常见问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-%E6%80%BB%E7%BB%93"><span class="nav-number">6.</span> <span class="nav-text">6. 总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="nav-number">7.</span> <span class="nav-text">7. 参考资料</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%9B%AE%E5%BD%95"><span class="nav-number">1.</span> <span class="nav-text">目录</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5%E4%B8%8E%E8%BF%9B%E7%A8%8B%E7%BB%84%EF%BC%88group%EF%BC%89"><span class="nav-number">2.</span> <span class="nav-text">1. 基本概念与进程组（group）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E7%BB%84%E4%B8%BE%E4%BE%8B"><span class="nav-number">2.1.</span> <span class="nav-text">进程组举例</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E5%9F%BA%E6%9C%AC%E5%BC%A0%E9%87%8F%E9%80%9A%E4%BF%A1-API"><span class="nav-number">3.</span> <span class="nav-text">2. 基本张量通信 API</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-send-recv-isend-irecv"><span class="nav-number">3.1.</span> <span class="nav-text">2.1 send &#x2F; recv &#x2F; isend &#x2F; irecv</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8F%82%E6%95%B0%E8%AF%B4%E6%98%8E"><span class="nav-number">3.1.1.</span> <span class="nav-text">参数说明</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#tag"><span class="nav-number">3.1.2.</span> <span class="nav-text">tag</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#group-dst-group-src"><span class="nav-number">3.1.3.</span> <span class="nav-text">group_dst&#x2F;group_src</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E9%80%9A%E4%BF%A1%E6%B5%81%E7%A8%8B%E7%A4%BA%E6%84%8F%E5%9B%BE"><span class="nav-number">3.2.</span> <span class="nav-text">2.2 通信流程示意图</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%BB%A5-group-2-4-6-8-10-%EF%BC%8C%E8%AE%A9-rank-2-%E5%8F%91%EF%BC%8Crank-10-%E6%94%B6%E4%B8%BA%E4%BE%8B%EF%BC%9A"><span class="nav-number">3.2.1.</span> <span class="nav-text">以 group &#x3D; [2, 4, 6, 8, 10]，让 rank&#x3D;2 发，rank&#x3D;10 收为例：</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E4%BB%A3%E7%A0%81%E5%AE%9E%E4%BE%8B"><span class="nav-number">3.3.</span> <span class="nav-text">2.3 代码实例</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-%E5%BC%82%E6%AD%A5%E9%80%9A%E4%BF%A1%EF%BC%88isend-irecv%EF%BC%89"><span class="nav-number">3.4.</span> <span class="nav-text">2.4 异步通信（isend&#x2F;irecv）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E5%AF%B9%E8%B1%A1%E5%88%97%E8%A1%A8%E9%80%9A%E4%BF%A1-API"><span class="nav-number">4.</span> <span class="nav-text">3. 对象列表通信 API</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-send-object-list-recv-object-list-%E7%94%A8%E6%B3%95"><span class="nav-number">4.1.</span> <span class="nav-text">3.1 send_object_list &#x2F; recv_object_list 用法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E5%AF%B9%E8%B1%A1%E9%80%9A%E4%BF%A1%E6%B5%81%E7%A8%8B%E5%9B%BE"><span class="nav-number">4.2.</span> <span class="nav-text">3.2 对象通信流程图</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E5%85%B8%E5%9E%8B%E4%BB%A3%E7%A0%81%E7%A4%BA%E4%BE%8B"><span class="nav-number">4.3.</span> <span class="nav-text">3.3 典型代码示例</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8F%91%E9%80%81%E7%AB%AF"><span class="nav-number">4.3.1.</span> <span class="nav-text">发送端</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%8E%A5%E6%94%B6%E7%AB%AF"><span class="nav-number">4.3.2.</span> <span class="nav-text">接收端</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-%E6%8E%A5%E5%8F%A3%E5%AE%9E%E7%8E%B0%E6%A0%B8%E5%BF%83%E4%BB%A3%E7%A0%81"><span class="nav-number">4.4.</span> <span class="nav-text">3.4 接口实现核心代码</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-5-%E5%85%B3%E4%BA%8E-rank-objects"><span class="nav-number">4.5.</span> <span class="nav-text">3.5 关于 rank_objects</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-group%E3%80%81src-dst%E3%80%81group-src-group-dst-%E5%8F%82%E6%95%B0%E5%85%B3%E7%B3%BB"><span class="nav-number">5.</span> <span class="nav-text">4. group、src&#x2F;dst、group_src&#x2F;group_dst 参数关系</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-%E6%98%93%E9%94%99%E7%82%B9-%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98"><span class="nav-number">6.</span> <span class="nav-text">5. 易错点 &amp; 常见问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-%E6%80%BB%E7%BB%93"><span class="nav-number">7.</span> <span class="nav-text">6. 总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-%E6%89%B9%E9%87%8F%E7%82%B9%E5%AF%B9%E7%82%B9%E9%80%9A%E4%BF%A1%E6%8E%A5%E5%8F%A3%EF%BC%9Abatch-isend-irecv"><span class="nav-number">8.</span> <span class="nav-text">7. 批量点对点通信接口：batch_isend_irecv</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#7-1-%E6%8E%A5%E5%8F%A3%E7%AE%80%E4%BB%8B"><span class="nav-number">8.1.</span> <span class="nav-text">7.1 接口简介</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%87%BD%E6%95%B0%E7%AD%BE%E5%90%8D"><span class="nav-number">8.1.1.</span> <span class="nav-text">函数签名</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-2-%E5%85%B8%E5%9E%8B%E4%BD%BF%E7%94%A8%E5%9C%BA%E6%99%AF"><span class="nav-number">8.2.</span> <span class="nav-text">7.2 典型使用场景</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-3-%E8%B0%83%E7%94%A8%E6%B5%81%E7%A8%8B%E4%B8%8E%E5%8F%82%E6%95%B0%E8%AF%B4%E6%98%8E"><span class="nav-number">8.3.</span> <span class="nav-text">7.3 调用流程与参数说明</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#P2POp-%E7%94%A8%E6%B3%95"><span class="nav-number">8.3.1.</span> <span class="nav-text">P2POp 用法</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-4-%E4%BB%A3%E7%A0%81%E5%AE%9E%E4%BE%8B"><span class="nav-number">8.4.</span> <span class="nav-text">7.4 代码实例</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-5-%E9%80%9A%E4%BF%A1%E6%B5%81%E7%A8%8B%E5%9B%BE"><span class="nav-number">8.5.</span> <span class="nav-text">7.5 通信流程图</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-6-%E9%87%8D%E8%A6%81%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9"><span class="nav-number">8.6.</span> <span class="nav-text">7.6 重要注意事项</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-7-%E6%BA%90%E7%A0%81%E5%AE%9E%E7%8E%B0%E8%A6%81%E7%82%B9"><span class="nav-number">8.7.</span> <span class="nav-text">7.7 源码实现要点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-8-API-%E6%96%87%E6%A1%A3%E9%93%BE%E6%8E%A5"><span class="nav-number">8.8.</span> <span class="nav-text">7.8 API 文档链接</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-%E6%80%BB%E7%BB%93%E8%A1%A5%E5%85%85%EF%BC%88%E5%90%AB%E6%9C%AC%E8%8A%82%E4%B8%8E%E5%89%8D%E6%96%87%E6%80%BB%E8%A7%88%EF%BC%89"><span class="nav-number">9.</span> <span class="nav-text">8. 总结补充（含本节与前文总览）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#9-%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="nav-number">10.</span> <span class="nav-text">9. 参考资料</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
