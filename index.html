@@ -165,7 +165,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2025/06/14/send_recv/">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2025/06/14/distribute/tcpstore_rendezvous/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -179,7 +179,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/2025/06/14/send_recv/" class="post-title-link" itemprop="url">pytorch send recv 用法详解</a>
+            <a href="/2025/06/14/distribute/tcpstore_rendezvous/" class="post-title-link" itemprop="url">PyTorch 分布式 TCPStore Rendezvous 机制</a>
         </h2>
 
         <div class="post-meta">
@@ -189,7 +189,297 @@
               </span>
               <span class="post-meta-item-text">Posted on</span>
 
-              <time title="Created: 2025-06-14 16:33:53" itemprop="dateCreated datePublished" datetime="2025-06-14T16:33:53+08:00">2025-06-14</time>
+              <time title="Created: 2025-06-14 16:49:22" itemprop="dateCreated datePublished" datetime="2025-06-14T16:49:22+08:00">2025-06-14</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F/" itemprop="url" rel="index"><span itemprop="name">分布式</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <hr>
+<h2 id="🧠-背景概述"><a href="#🧠-背景概述" class="headerlink" title="🧠 背景概述"></a>🧠 背景概述</h2><ul>
+<li><strong>目标</strong>：在 <code>init_process_group</code> 中实现跨进程注册、排序及 barrier 同步，为 NCCL&#x2F;Gloo 通信组构建创建一致上下文。</li>
+<li><strong>时序</strong>：所有 <code>set</code>&#x2F;<code>get</code>&#x2F;<code>wait</code> 操作均发生在 NCCL 通信初始化之前（即 rendezvous 阶段）。</li>
+<li><strong>机制</strong>：socket 客户端—服务器模型 + backend 控制同步逻辑。</li>
+</ul>
+<hr>
+<h2 id="1-消息协议格式"><a href="#1-消息协议格式" class="headerlink" title="1. 消息协议格式"></a>1. 消息协议格式</h2><p>客户端向 master 发送的包格式为：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">\[4 B 总长度]\[1 B 操作码]\[4 B key\_len]\[4 B value\_len]\[key]\[value]</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>总长度：网络字节序，不含自身；</li>
+<li>操作码：<code>1=SET</code>, <code>2=GET</code>, <code>3=WAIT</code>；</li>
+<li><code>key_len</code>, <code>value_len</code>：后续字段长度；</li>
+<li><code>key</code>, <code>value</code>：实际数据；</li>
+<li>Master 解析后，回复：<code>OK</code> &#x2F; value 内容 &#x2F; <code>READY</code> 等。</li>
+</ul>
+<hr>
+<h2 id="2-Rendezvous-阶段流程（2-机，4-卡-each，聚焦-rank1-rank5）"><a href="#2-Rendezvous-阶段流程（2-机，4-卡-each，聚焦-rank1-rank5）" class="headerlink" title="2. Rendezvous 阶段流程（2 机，4 卡 each，聚焦 rank1 &amp; rank5）"></a>2. Rendezvous 阶段流程（2 机，4 卡 each，聚焦 rank1 &amp; rank5）</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">flowchart TB</span><br><span class="line">  subgraph A[&quot;Machine A (rank0-3)&quot;]</span><br><span class="line">    master[&quot;TCPStoreBackend (master)&quot;]</span><br><span class="line">    r1[Worker rank1]</span><br><span class="line">    master --- r1</span><br><span class="line">  end</span><br><span class="line">  subgraph B[&quot;Machine B (rank4-7)&quot;]</span><br><span class="line">    r5[Worker rank5]</span><br><span class="line">    master --- r5</span><br><span class="line">  end</span><br><span class="line"></span><br><span class="line">  r1 --&gt;|SET key rank1_addr| master</span><br><span class="line">  r5 --&gt;|SET key rank5_addr| master</span><br><span class="line"></span><br><span class="line">  r1 --&gt;|WAIT  rendezvous_done| master</span><br><span class="line">  r5 --&gt;|WAIT  rendezvous_done| master</span><br><span class="line"></span><br><span class="line">  %% Server: waits until all ranks set, then:</span><br><span class="line">  master --&gt;|write READY| r1</span><br><span class="line">  master --&gt;|write READY| r5</span><br><span class="line"></span><br><span class="line">  %% 完成 WAIT 返回，进入 NCCL 初始化</span><br><span class="line">  r1 --&gt;|recv READY → NCCL init| NCCL_1[NCCL Init rank1]</span><br><span class="line">  r5 --&gt;|recv READY → NCCL init| NCCL_5[NCCL Init rank5]</span><br></pre></td></tr></table></figure>
+
+<h3 id="🧩-步骤解析"><a href="#🧩-步骤解析" class="headerlink" title="🧩 步骤解析"></a>🧩 步骤解析</h3><ol>
+<li><strong>Master</strong> 在端口（如 29500）侦听，接收连接；</li>
+<li><strong>rank1 &#x2F; rank5</strong> 分别发送 <code>SET</code>（注册地址）；</li>
+<li>随后发送 <code>WAIT(&quot;rendezvous_done&quot;)</code>，Socket 处于阻塞状态；</li>
+<li>Master 收集所有 8 个 rank 的 <code>SET</code> 后，遍历 <code>wait</code> 阻塞的连接，逐一写入 <code>READY</code>；</li>
+<li>Worker 收到 <code>READY</code>，退出阻塞，进入 NCCL 初始化阶段；</li>
+<li>随后在这一阶段内：交换 <code>ncclUniqueId</code> (via store), 调用 <code>ncclCommInitRank</code> 构建通信组 (<a target="_blank" rel="noopener" href="https://github.com/pytorch/pytorch/issues/107177?utm_source=chatgpt.com" title="Timeout during NCCL initialization due to store #107177 - GitHub">github.com</a>, <a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/elastic/rendezvous.html?utm_source=chatgpt.com" title="Rendezvous — PyTorch 2.7 documentation">pytorch.org</a>)。</li>
+</ol>
+<hr>
+<h2 id="3-Backend-细节对比"><a href="#3-Backend-细节对比" class="headerlink" title="3. Backend 细节对比"></a>3. Backend 细节对比</h2><table>
+<thead>
+<tr>
+<th>Backend</th>
+<th>I&#x2F;O 模型</th>
+<th>特点与适应性</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>经典 TCPStoreBackend</strong></td>
+<td><code>accept()</code> + per-conn 阻塞&#x2F;POLL</td>
+<td>简单，连接较多时扩展性差</td>
+</tr>
+<tr>
+<td><strong>libuv 异步 Backend</strong></td>
+<td>单线程 event-loop, <code>readable/writeable</code></td>
+<td>默认启用（v2.4+），高并发更优 (<a target="_blank" rel="noopener" href="https://docs.pytorch.org/tutorials/intermediate/TCPStore_libuv_backend.html?utm_source=chatgpt.com" title="Introduction to Libuv TCPStore Backend - PyTorch documentation">docs.pytorch.org</a>)</td>
+</tr>
+</tbody></table>
+<ul>
+<li>libuv backend 使用 <code>uv_read_start</code> 自动分块读取，根据 header 控制拼包；</li>
+<li>注册 <code>WAIT</code> 时，将 conn 保存在 map 中，不立即回写；当条件满足，触发 <code>uv_write()</code> → <code>uv_write_cb</code> 实现唤醒。</li>
+</ul>
+<hr>
+<h2 id="4-partial-key-WAIT-机制"><a href="#4-partial-key-WAIT-机制" class="headerlink" title="4. partial-key WAIT 机制"></a>4. partial-key WAIT 机制</h2><ul>
+<li>客户端可以执行 <code>store.wait([&quot;kA&quot;, &quot;kB&quot;])</code>；</li>
+<li>Master 将此等待登记至 <code>MultiWaitRegistry</code>；</li>
+<li>当 <strong>所有相关 key 均被 <code>SET</code></strong> 后，才统一向该连接写 <code>READY</code>，触发唤醒。</li>
+</ul>
+<hr>
+<h2 id="5-“广播-READY”-的实现机制"><a href="#5-“广播-READY”-的实现机制" class="headerlink" title="5. “广播 READY” 的实现机制"></a>5. “广播 READY” 的实现机制</h2><ul>
+<li>不是通过 NCCL&#x2F;Gloo broadcast 算子；</li>
+<li>Master <strong>遍历挂起的 WAIT sockets，逐个写 READY</strong>；</li>
+<li>为 rendezvous 过程自身提供同步机制，通信组尚未创建。</li>
+</ul>
+<hr>
+<h2 id="6-时间线概览"><a href="#6-时间线概览" class="headerlink" title="6. 时间线概览"></a>6. 时间线概览</h2><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">┌──────────────────────────┐</span><br><span class="line">│ SET/WAIT via TCP Store   │  # rendezvous 阶段</span><br><span class="line">└──────────────────────────┘</span><br><span class="line">            ↓</span><br><span class="line">┌──────────────────────────┐</span><br><span class="line">│ recv READY → wait returns│</span><br><span class="line">└──────────────────────────┘</span><br><span class="line">            ↓</span><br><span class="line">┌──────────────────────────┐</span><br><span class="line">│ NCCL Init                │  # 调用 ncclUniqueId, CommInitRank</span><br><span class="line">└──────────────────────────┘</span><br><span class="line">            ↓</span><br><span class="line">┌──────────────────────────┐</span><br><span class="line">│ Collective Ops (DDP)     │</span><br><span class="line">└──────────────────────────┘</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="✅-总结要点"><a href="#✅-总结要点" class="headerlink" title="✅ 总结要点"></a>✅ 总结要点</h2><ol>
+<li>标注 <strong>rank1 &#x2F; rank5 的流程图</strong>，更直观；</li>
+<li><code>SET</code> + <code>WAIT</code> 操作全部发生于 rendezvous 阶段，见图；</li>
+<li>Master “广播 READY” 是 socket 写操作，不是通信库广播；</li>
+<li>NCCL 初始化在 rendezvous 完成后进行；</li>
+<li>libuv backend 提供更高效 I&#x2F;O 处理及 message 拼接处理能力 (<a target="_blank" rel="noopener" href="https://docs.pytorch.org/tutorials/intermediate/TCPStore_libuv_backend.html?utm_source=chatgpt.com" title="Introduction to Libuv TCPStore Backend - PyTorch documentation">docs.pytorch.org</a>, <a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/distributed.html?utm_source=chatgpt.com" title="Distributed communication package - torch.distributed">pytorch.org</a>, <a target="_blank" rel="noopener" href="https://github.com/pytorch/pytorch/blob/main/torch/distributed/rendezvous.py?utm_source=chatgpt.com" title="pytorch&#x2F;torch&#x2F;distributed&#x2F;rendezvous.py at main - GitHub">github.com</a>)。</li>
+</ol>
+<hr>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2025/06/14/distribute/device_mesh/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="John Doe">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="果冻甜甜的">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2025/06/14/distribute/device_mesh/" class="post-title-link" itemprop="url">🚀 深度剖析 PyTorch DeviceMesh：实现原理与实战</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2025-06-14 16:48:48" itemprop="dateCreated datePublished" datetime="2025-06-14T16:48:48+08:00">2025-06-14</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F/" itemprop="url" rel="index"><span itemprop="name">分布式</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <hr>
+<h2 id="一、为何使用-DeviceMesh？"><a href="#一、为何使用-DeviceMesh？" class="headerlink" title="一、为何使用 DeviceMesh？"></a>一、为何使用 DeviceMesh？</h2><p>在混合并行（DP&#x2F;TP&#x2F;PP&#x2F;HSDP&#x2F;…）中，需要管理多个子通信组（ProcessGroup），对应复杂的设备拓扑结构。<code>DeviceMesh</code> 提供了：</p>
+<ul>
+<li>理论上无缝支持任意维度的多维拓扑；</li>
+<li>自动拆分进程组(<code>new_group</code>&#x2F;<code>split_group</code>)；</li>
+<li>灵活切片子 Mesh；</li>
+<li>经历设计周全的高效初始化方案 (<a target="_blank" rel="noopener" href="https://docs.pytorch.org/tutorials/recipes/distributed_device_mesh.html?utm_source=chatgpt.com" title="Getting Started with DeviceMesh - PyTorch documentation">docs.pytorch.org</a>, <a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/distributed.html?utm_source=chatgpt.com" title="Distributed communication package - torch.distributed">pytorch.org</a>)。</li>
+</ul>
+<hr>
+<h2 id="二、初始化流程"><a href="#二、初始化流程" class="headerlink" title="二、初始化流程"></a>二、初始化流程</h2><h3 id="init-device-mesh-的作用"><a href="#init-device-mesh-的作用" class="headerlink" title="init_device_mesh(...) 的作用"></a><code>init_device_mesh(...)</code> 的作用</h3><p>一个一行搞定的方法，它会：</p>
+<ol>
+<li>初始化全局 <code>init_process_group(...)</code>（若未初始化）；</li>
+<li>根据 <code>mesh_shape</code> 自动构造 CPU 上的 <code>torch.arange(...).view(...)</code>；</li>
+<li>创建 <code>DeviceMesh(...)</code>。内部完成子组拆分原理（见下一节）。</li>
+</ol>
+<hr>
+<h3 id="DeviceMesh-init-init-process-groups"><a href="#DeviceMesh-init-init-process-groups" class="headerlink" title="DeviceMesh.__init__() + _init_process_groups()"></a><code>DeviceMesh.__init__()</code> + <code>_init_process_groups()</code></h3><ul>
+<li><p><strong>存储</strong>：<code>device_type</code>、<code>mesh</code>、<code>mesh_dim_names</code>；</p>
+</li>
+<li><p><strong>通信组拆分</strong>：遍历每个维度 <code>dim</code>：</p>
+<ul>
+<li>使用 <code>mesh.swapdims(-1, dim).reshape(-1, size(dim))</code> 列出该维所有子组 rank；</li>
+<li>若 NCCL 已绑定 GPU，即可用 <code>split_group</code> 一次拆出全部子组；</li>
+<li>否则使用 <code>new_group()</code> 分 group 拆；</li>
+<li>并将当前 rank 属于的那组信息放入 <code>self._dim_group_infos[dim]</code>；</li>
+</ul>
+</li>
+<li><p><strong>结果</strong>：每个维度对应一个包含当前 rank 的 <code>ProcessGroup</code> 信息列表。</p>
+</li>
+</ul>
+<hr>
+<h2 id="三、核心接口与内部实现解析"><a href="#三、核心接口与内部实现解析" class="headerlink" title="三、核心接口与内部实现解析"></a>三、核心接口与内部实现解析</h2><h3 id="1-属性与方法"><a href="#1-属性与方法" class="headerlink" title="1. 属性与方法"></a>1. 属性与方法</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">mesh.shape  <span class="comment"># tuple(self.mesh.shape)</span></span><br><span class="line">mesh.ndim   <span class="comment"># int(self.mesh.ndim)</span></span><br><span class="line">mesh.size(dim=<span class="literal">None</span>)  <span class="comment"># 总元素数 or self.mesh.size(dim)</span></span><br></pre></td></tr></table></figure>
+
+<p>用于获取 mesh 元结构和规模，适用于判断维度数量、循环迭代、并行策略配置等场景。</p>
+<hr>
+<h3 id="2-Rank-与坐标"><a href="#2-Rank-与坐标" class="headerlink" title="2. Rank 与坐标"></a>2. Rank 与坐标</h3><ul>
+<li><code>get_rank()</code>：等价于 <code>torch.distributed.get_rank()</code>，返回全局 rank；</li>
+<li><code>get_local_rank(mesh_dim)</code>：内部调用 <code>get_rank(self.get_group(mesh_dim))</code> → 当前维度的小组内编号；</li>
+<li><code>get_coordinate()</code>：返回 <code>self._coordinate_on_dim</code>，其在初始化中通过 <code>(self.mesh==global_rank).nonzero()</code> 获得。</li>
+</ul>
+<p>示例：<code>mesh_shape=(4,2)</code>，rank&#x3D;5 → local_pp&#x3D;2、local_tp&#x3D;1，coordinate <code>[2,1]</code>。</p>
+<hr>
+<h3 id="3-通信组获取"><a href="#3-通信组获取" class="headerlink" title="3. 通信组获取"></a>3. 通信组获取</h3><ul>
+<li><p><code>get_group(mesh_dim)</code>：</p>
+<ul>
+<li>若 1D 且不传参，直接返回唯一子进程组；</li>
+<li>多维则根据 <code>mesh_dim</code>（索引或名字）检索 <code>self._dim_group_infos[dim]</code>，用 <code>_find_pg_by_ranks_and_tag()</code> 获取对应 <code>ProcessGroup</code>。</li>
+</ul>
+</li>
+<li><p><code>get_all_groups()</code>：返回所有维度的 group 列表；</p>
+</li>
+<li><p><code>__getitem__(dims)</code>：切片接口调用 <code>_mesh_resources._get_slice_mesh_dims(...)</code>，创建新的子 mesh，保留底层 communicator，但维度降。</p>
+<ul>
+<li>支持单维或多维切片，且返回的 submesh 顺序按传入顺序排列 (<a target="_blank" rel="noopener" href="https://discuss.ray.io/t/init-device-mesh-in-pytorch-distributed/22371?utm_source=chatgpt.com" title="Init device mesh in pytorch distributed - Ray Train">discuss.ray.io</a>, <a target="_blank" rel="noopener" href="https://gemfury.com/turingmotors/python%3Atorch/torch-2.1.2-cp311-cp311-linux_aarch64.whl/content/distributed/_tensor/device_mesh.py?utm_source=chatgpt.com" title="distributed&#x2F;_tensor&#x2F;device_mesh.py · turingmotors&#x2F;torch - Gemfury">gemfury.com</a>, <a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/distributed.html?utm_source=chatgpt.com" title="Distributed communication package - torch.distributed">pytorch.org</a>)。</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h3 id="4-from-group-方法"><a href="#4-from-group-方法" class="headerlink" title="4. from_group(...) 方法"></a>4. <code>from_group(...)</code> 方法</h3><ul>
+<li>可接受单 group 或 group 列表；</li>
+<li>创建新的 <code>DeviceMesh</code> 时不会调用 backend 初始化；</li>
+<li>会复用现有 <code>ProcessGroup</code>，并填充 <code>_dim_group_infos</code>，因此 <code>get_group(...)</code> 将直接返回传入的实例，避免重复创建 group。</li>
+</ul>
+<hr>
+<h2 id="四、完整单机-8-卡-Demo：tp-2-pp-4"><a href="#四、完整单机-8-卡-Demo：tp-2-pp-4" class="headerlink" title="四、完整单机 8 卡 Demo：tp&#x3D;2, pp&#x3D;4"></a>四、完整单机 8 卡 Demo：tp&#x3D;2, pp&#x3D;4</h2><p>下面演示如何调用所有接口并输出结果。注意：需在 <code>torchrun --nproc_per_node=8</code> 下运行。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> os, torch, torch.distributed <span class="keyword">as</span> dist</span><br><span class="line"><span class="keyword">from</span> torch.distributed.device_mesh <span class="keyword">import</span> init_device_mesh</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">run_device_mesh_demo</span>():</span><br><span class="line">    dist.init_process_group(<span class="string">&quot;nccl&quot;</span>)</span><br><span class="line">    <span class="comment"># ⬇️ 初始化 2-维 mesh：pp=4, tp=2</span></span><br><span class="line">    mesh = init_device_mesh(<span class="string">&quot;cuda&quot;</span>, mesh_shape=(<span class="number">4</span>, <span class="number">2</span>), mesh_dim_names=(<span class="string">&quot;pp&quot;</span>, <span class="string">&quot;tp&quot;</span>))</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># ✅ rank 和坐标</span></span><br><span class="line">    gr = mesh.get_rank()            <span class="comment"># 全局 rank</span></span><br><span class="line">    coord = mesh.get_coordinate()   <span class="comment"># [pp_idx, tp_idx]</span></span><br><span class="line">    local_pp = mesh.get_local_rank(<span class="string">&quot;pp&quot;</span>)</span><br><span class="line">    local_tp = mesh.get_local_rank(<span class="string">&quot;tp&quot;</span>)</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># ⬇️ mesh 基本结构</span></span><br><span class="line">    total = mesh.size()</span><br><span class="line">    pp_size, tp_size = mesh.size(<span class="string">&quot;pp&quot;</span>), mesh.size(<span class="string">&quot;tp&quot;</span>)</span><br><span class="line">    ndim = mesh.ndim</span><br><span class="line">    shape = mesh.shape</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># ⬇️ 获取通信组</span></span><br><span class="line">    pp_group = mesh.get_group(<span class="string">&quot;pp&quot;</span>)</span><br><span class="line">    tp_group = mesh.get_group(<span class="string">&quot;tp&quot;</span>)</span><br><span class="line">    all_groups = mesh.get_all_groups()</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># ⬇️ 切片出子 mesh</span></span><br><span class="line">    tp_mesh = mesh[<span class="string">&quot;tp&quot;</span>]</span><br><span class="line">    pp_mesh = mesh[<span class="string">&quot;pp&quot;</span>]</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># ⬇️ 输出结果</span></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">f&quot;rank=<span class="subst">&#123;gr&#125;</span>, coord=<span class="subst">&#123;coord&#125;</span>, local_pp=<span class="subst">&#123;local_pp&#125;</span>, local_tp=<span class="subst">&#123;local_tp&#125;</span>&quot;</span>)</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">f&quot;ndim=<span class="subst">&#123;ndim&#125;</span>, shape=<span class="subst">&#123;shape&#125;</span>, total=<span class="subst">&#123;total&#125;</span>, pp=<span class="subst">&#123;pp_size&#125;</span>, tp=<span class="subst">&#123;tp_size&#125;</span>&quot;</span>)</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;pp_group ranks:&quot;</span>, dist.get_process_group_ranks(pp_group))</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;tp_group ranks:&quot;</span>, dist.get_process_group_ranks(tp_group))</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;all_groups sizes:&quot;</span>, [<span class="built_in">len</span>(dist.get_process_group_ranks(g)) <span class="keyword">for</span> g <span class="keyword">in</span> all_groups])</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;tp_mesh ndim, shape:&quot;</span>, tp_mesh.ndim, tp_mesh.shape)</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;pp_mesh ndim, shape:&quot;</span>, pp_mesh.ndim, pp_mesh.shape)</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&quot;__main__&quot;</span>:</span><br><span class="line">    run_device_mesh_demo()</span><br></pre></td></tr></table></figure>
+
+<h3 id="💬-预期输出（例如-rank-5）："><a href="#💬-预期输出（例如-rank-5）：" class="headerlink" title="💬 预期输出（例如 rank &#x3D; 5）："></a>💬 预期输出（例如 rank &#x3D; 5）：</h3><p>rank&#x3D;5, coord&#x3D;[2,1], local_pp&#x3D;2, local_tp&#x3D;1<br>ndim&#x3D;2, shape&#x3D;(4,2), total&#x3D;8, pp&#x3D;4, tp&#x3D;2<br>pp_group ranks: [4,5,6,7]<br>tp_group ranks: [5,7]<br>all_groups sizes: [4,2]<br>tp_mesh ndim, shape: 1 (2,)<br>pp_mesh ndim, shape: 1 (4,)</p>
+<p>说明：</p>
+<ul>
+<li>rank&#x3D;5 位于 pipeline 段 2，tp 内编号 1；</li>
+<li><code>pp_group</code> 包含与其同 segment 的 4 张卡；</li>
+<li><code>tp_group</code> 包含同 segment tp 维度的两张卡；</li>
+<li>切片后 <code>tp_mesh</code>、<code>pp_mesh</code> 成为 1 维结构，用于后续 parallelization。</li>
+</ul>
+<hr>
+<h2 id="👏-总结"><a href="#👏-总结" class="headerlink" title="👏 总结"></a>👏 总结</h2><ul>
+<li><code>DeviceMesh</code> 构建自身通过 <code>init_device_mesh()</code> 完成初始化与子组拆分；</li>
+<li>接口内部实现逻辑与 Group 管理机制清晰、高效；</li>
+<li><code>__getitem__</code>为多维并行下子 Mesh 切片关键工具，对集成 parallel APIs 至关重要；</li>
+<li>通过该机制，可以简单地组织复杂的 hybrid-parallel pipelines，同时充分复用 communicator 资源并简化开发流程。</li>
+</ul>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2025/06/14/distribute/send_recv/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="John Doe">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="果冻甜甜的">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2025/06/14/distribute/send_recv/" class="post-title-link" itemprop="url">pytorch send recv 用法详解</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2025-06-14 16:48:04" itemprop="dateCreated datePublished" datetime="2025-06-14T16:48:04+08:00">2025-06-14</time>
             </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -400,278 +690,6 @@
 <li><a target="_blank" rel="noopener" href="https://github.com/pytorch/pytorch/blob/main/torch/distributed/distributed_c10d.py">PyTorch distributed_c10d.py 源码</a></li>
 <li><a target="_blank" rel="noopener" href="https://mermaid-js.github.io/mermaid-live-editor/">Mermaid Live Editor</a></li>
 </ul>
-<hr>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2025/06/14/pytorch_DeviceMesh/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="John Doe">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="果冻甜甜的">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2025/06/14/pytorch_DeviceMesh/" class="post-title-link" itemprop="url">🚀 深度剖析 PyTorch `DeviceMesh`：实现原理与实战</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2025-06-14 10:55:50" itemprop="dateCreated datePublished" datetime="2025-06-14T10:55:50+08:00">2025-06-14</time>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <hr>
-<h2 id="一、为何使用-DeviceMesh？"><a href="#一、为何使用-DeviceMesh？" class="headerlink" title="一、为何使用 DeviceMesh？"></a>一、为何使用 DeviceMesh？</h2><p>在混合并行（DP&#x2F;TP&#x2F;PP&#x2F;HSDP&#x2F;…）中，需要管理多个子通信组（ProcessGroup），对应复杂的设备拓扑结构。<code>DeviceMesh</code> 提供了：</p>
-<ul>
-<li>理论上无缝支持任意维度的多维拓扑；</li>
-<li>自动拆分进程组(<code>new_group</code>&#x2F;<code>split_group</code>)；</li>
-<li>灵活切片子 Mesh；</li>
-<li>经历设计周全的高效初始化方案 (<a target="_blank" rel="noopener" href="https://docs.pytorch.org/tutorials/recipes/distributed_device_mesh.html?utm_source=chatgpt.com" title="Getting Started with DeviceMesh - PyTorch documentation">docs.pytorch.org</a>, <a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/distributed.html?utm_source=chatgpt.com" title="Distributed communication package - torch.distributed">pytorch.org</a>)。</li>
-</ul>
-<hr>
-<h2 id="二、初始化流程"><a href="#二、初始化流程" class="headerlink" title="二、初始化流程"></a>二、初始化流程</h2><h3 id="init-device-mesh-的作用"><a href="#init-device-mesh-的作用" class="headerlink" title="init_device_mesh(...) 的作用"></a><code>init_device_mesh(...)</code> 的作用</h3><p>一个一行搞定的方法，它会：</p>
-<ol>
-<li>初始化全局 <code>init_process_group(...)</code>（若未初始化）；</li>
-<li>根据 <code>mesh_shape</code> 自动构造 CPU 上的 <code>torch.arange(...).view(...)</code>；</li>
-<li>创建 <code>DeviceMesh(...)</code>。内部完成子组拆分原理（见下一节）。</li>
-</ol>
-<hr>
-<h3 id="DeviceMesh-init-init-process-groups"><a href="#DeviceMesh-init-init-process-groups" class="headerlink" title="DeviceMesh.__init__() + _init_process_groups()"></a><code>DeviceMesh.__init__()</code> + <code>_init_process_groups()</code></h3><ul>
-<li><p><strong>存储</strong>：<code>device_type</code>、<code>mesh</code>、<code>mesh_dim_names</code>；</p>
-</li>
-<li><p><strong>通信组拆分</strong>：遍历每个维度 <code>dim</code>：</p>
-<ul>
-<li>使用 <code>mesh.swapdims(-1, dim).reshape(-1, size(dim))</code> 列出该维所有子组 rank；</li>
-<li>若 NCCL 已绑定 GPU，即可用 <code>split_group</code> 一次拆出全部子组；</li>
-<li>否则使用 <code>new_group()</code> 分 group 拆；</li>
-<li>并将当前 rank 属于的那组信息放入 <code>self._dim_group_infos[dim]</code>；</li>
-</ul>
-</li>
-<li><p><strong>结果</strong>：每个维度对应一个包含当前 rank 的 <code>ProcessGroup</code> 信息列表。</p>
-</li>
-</ul>
-<hr>
-<h2 id="三、核心接口与内部实现解析"><a href="#三、核心接口与内部实现解析" class="headerlink" title="三、核心接口与内部实现解析"></a>三、核心接口与内部实现解析</h2><h3 id="1-属性与方法"><a href="#1-属性与方法" class="headerlink" title="1. 属性与方法"></a>1. 属性与方法</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">mesh.shape  <span class="comment"># tuple(self.mesh.shape)</span></span><br><span class="line">mesh.ndim   <span class="comment"># int(self.mesh.ndim)</span></span><br><span class="line">mesh.size(dim=<span class="literal">None</span>)  <span class="comment"># 总元素数 or self.mesh.size(dim)</span></span><br></pre></td></tr></table></figure>
-
-<p>用于获取 mesh 元结构和规模，适用于判断维度数量、循环迭代、并行策略配置等场景。</p>
-<hr>
-<h3 id="2-Rank-与坐标"><a href="#2-Rank-与坐标" class="headerlink" title="2. Rank 与坐标"></a>2. Rank 与坐标</h3><ul>
-<li><code>get_rank()</code>：等价于 <code>torch.distributed.get_rank()</code>，返回全局 rank；</li>
-<li><code>get_local_rank(mesh_dim)</code>：内部调用 <code>get_rank(self.get_group(mesh_dim))</code> → 当前维度的小组内编号；</li>
-<li><code>get_coordinate()</code>：返回 <code>self._coordinate_on_dim</code>，其在初始化中通过 <code>(self.mesh==global_rank).nonzero()</code> 获得。</li>
-</ul>
-<p>示例：<code>mesh_shape=(4,2)</code>，rank&#x3D;5 → local_pp&#x3D;2、local_tp&#x3D;1，coordinate <code>[2,1]</code>。</p>
-<hr>
-<h3 id="3-通信组获取"><a href="#3-通信组获取" class="headerlink" title="3. 通信组获取"></a>3. 通信组获取</h3><ul>
-<li><p><code>get_group(mesh_dim)</code>：</p>
-<ul>
-<li>若 1D 且不传参，直接返回唯一子进程组；</li>
-<li>多维则根据 <code>mesh_dim</code>（索引或名字）检索 <code>self._dim_group_infos[dim]</code>，用 <code>_find_pg_by_ranks_and_tag()</code> 获取对应 <code>ProcessGroup</code>。</li>
-</ul>
-</li>
-<li><p><code>get_all_groups()</code>：返回所有维度的 group 列表；</p>
-</li>
-<li><p><code>__getitem__(dims)</code>：切片接口调用 <code>_mesh_resources._get_slice_mesh_dims(...)</code>，创建新的子 mesh，保留底层 communicator，但维度降。</p>
-<ul>
-<li>支持单维或多维切片，且返回的 submesh 顺序按传入顺序排列 (<a target="_blank" rel="noopener" href="https://discuss.ray.io/t/init-device-mesh-in-pytorch-distributed/22371?utm_source=chatgpt.com" title="Init device mesh in pytorch distributed - Ray Train">discuss.ray.io</a>, <a target="_blank" rel="noopener" href="https://gemfury.com/turingmotors/python%3Atorch/torch-2.1.2-cp311-cp311-linux_aarch64.whl/content/distributed/_tensor/device_mesh.py?utm_source=chatgpt.com" title="distributed&#x2F;_tensor&#x2F;device_mesh.py · turingmotors&#x2F;torch - Gemfury">gemfury.com</a>, <a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/distributed.html?utm_source=chatgpt.com" title="Distributed communication package - torch.distributed">pytorch.org</a>)。</li>
-</ul>
-</li>
-</ul>
-<hr>
-<h3 id="4-from-group-方法"><a href="#4-from-group-方法" class="headerlink" title="4. from_group(...) 方法"></a>4. <code>from_group(...)</code> 方法</h3><ul>
-<li>可接受单 group 或 group 列表；</li>
-<li>创建新的 <code>DeviceMesh</code> 时不会调用 backend 初始化；</li>
-<li>会复用现有 <code>ProcessGroup</code>，并填充 <code>_dim_group_infos</code>，因此 <code>get_group(...)</code> 将直接返回传入的实例，避免重复创建 group。</li>
-</ul>
-<hr>
-<h2 id="四、完整单机-8-卡-Demo：tp-2-pp-4"><a href="#四、完整单机-8-卡-Demo：tp-2-pp-4" class="headerlink" title="四、完整单机 8 卡 Demo：tp&#x3D;2, pp&#x3D;4"></a>四、完整单机 8 卡 Demo：tp&#x3D;2, pp&#x3D;4</h2><p>下面演示如何调用所有接口并输出结果。注意：需在 <code>torchrun --nproc_per_node=8</code> 下运行。</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> os, torch, torch.distributed <span class="keyword">as</span> dist</span><br><span class="line"><span class="keyword">from</span> torch.distributed.device_mesh <span class="keyword">import</span> init_device_mesh</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">run_device_mesh_demo</span>():</span><br><span class="line">    dist.init_process_group(<span class="string">&quot;nccl&quot;</span>)</span><br><span class="line">    <span class="comment"># ⬇️ 初始化 2-维 mesh：pp=4, tp=2</span></span><br><span class="line">    mesh = init_device_mesh(<span class="string">&quot;cuda&quot;</span>, mesh_shape=(<span class="number">4</span>, <span class="number">2</span>), mesh_dim_names=(<span class="string">&quot;pp&quot;</span>, <span class="string">&quot;tp&quot;</span>))</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># ✅ rank 和坐标</span></span><br><span class="line">    gr = mesh.get_rank()            <span class="comment"># 全局 rank</span></span><br><span class="line">    coord = mesh.get_coordinate()   <span class="comment"># [pp_idx, tp_idx]</span></span><br><span class="line">    local_pp = mesh.get_local_rank(<span class="string">&quot;pp&quot;</span>)</span><br><span class="line">    local_tp = mesh.get_local_rank(<span class="string">&quot;tp&quot;</span>)</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># ⬇️ mesh 基本结构</span></span><br><span class="line">    total = mesh.size()</span><br><span class="line">    pp_size, tp_size = mesh.size(<span class="string">&quot;pp&quot;</span>), mesh.size(<span class="string">&quot;tp&quot;</span>)</span><br><span class="line">    ndim = mesh.ndim</span><br><span class="line">    shape = mesh.shape</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># ⬇️ 获取通信组</span></span><br><span class="line">    pp_group = mesh.get_group(<span class="string">&quot;pp&quot;</span>)</span><br><span class="line">    tp_group = mesh.get_group(<span class="string">&quot;tp&quot;</span>)</span><br><span class="line">    all_groups = mesh.get_all_groups()</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># ⬇️ 切片出子 mesh</span></span><br><span class="line">    tp_mesh = mesh[<span class="string">&quot;tp&quot;</span>]</span><br><span class="line">    pp_mesh = mesh[<span class="string">&quot;pp&quot;</span>]</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># ⬇️ 输出结果</span></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">f&quot;rank=<span class="subst">&#123;gr&#125;</span>, coord=<span class="subst">&#123;coord&#125;</span>, local_pp=<span class="subst">&#123;local_pp&#125;</span>, local_tp=<span class="subst">&#123;local_tp&#125;</span>&quot;</span>)</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">f&quot;ndim=<span class="subst">&#123;ndim&#125;</span>, shape=<span class="subst">&#123;shape&#125;</span>, total=<span class="subst">&#123;total&#125;</span>, pp=<span class="subst">&#123;pp_size&#125;</span>, tp=<span class="subst">&#123;tp_size&#125;</span>&quot;</span>)</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;pp_group ranks:&quot;</span>, dist.get_process_group_ranks(pp_group))</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;tp_group ranks:&quot;</span>, dist.get_process_group_ranks(tp_group))</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;all_groups sizes:&quot;</span>, [<span class="built_in">len</span>(dist.get_process_group_ranks(g)) <span class="keyword">for</span> g <span class="keyword">in</span> all_groups])</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;tp_mesh ndim, shape:&quot;</span>, tp_mesh.ndim, tp_mesh.shape)</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;pp_mesh ndim, shape:&quot;</span>, pp_mesh.ndim, pp_mesh.shape)</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&quot;__main__&quot;</span>:</span><br><span class="line">    run_device_mesh_demo()</span><br></pre></td></tr></table></figure>
-
-<h3 id="💬-预期输出（例如-rank-5）："><a href="#💬-预期输出（例如-rank-5）：" class="headerlink" title="💬 预期输出（例如 rank &#x3D; 5）："></a>💬 预期输出（例如 rank &#x3D; 5）：</h3><p>rank&#x3D;5, coord&#x3D;[2,1], local_pp&#x3D;2, local_tp&#x3D;1<br>ndim&#x3D;2, shape&#x3D;(4,2), total&#x3D;8, pp&#x3D;4, tp&#x3D;2<br>pp_group ranks: [4,5,6,7]<br>tp_group ranks: [5,7]<br>all_groups sizes: [4,2]<br>tp_mesh ndim, shape: 1 (2,)<br>pp_mesh ndim, shape: 1 (4,)</p>
-<p>说明：</p>
-<ul>
-<li>rank&#x3D;5 位于 pipeline 段 2，tp 内编号 1；</li>
-<li><code>pp_group</code> 包含与其同 segment 的 4 张卡；</li>
-<li><code>tp_group</code> 包含同 segment tp 维度的两张卡；</li>
-<li>切片后 <code>tp_mesh</code>、<code>pp_mesh</code> 成为 1 维结构，用于后续 parallelization。</li>
-</ul>
-<hr>
-<h2 id="👏-总结"><a href="#👏-总结" class="headerlink" title="👏 总结"></a>👏 总结</h2><ul>
-<li><code>DeviceMesh</code> 构建自身通过 <code>init_device_mesh()</code> 完成初始化与子组拆分；</li>
-<li>接口内部实现逻辑与 Group 管理机制清晰、高效；</li>
-<li><code>__getitem__</code>为多维并行下子 Mesh 切片关键工具，对集成 parallel APIs 至关重要；</li>
-<li>通过该机制，可以简单地组织复杂的 hybrid-parallel pipelines，同时充分复用 communicator 资源并简化开发流程。</li>
-</ul>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2025/06/14/pytorch_tcpstore_rendezvous/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="John Doe">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="果冻甜甜的">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2025/06/14/pytorch_tcpstore_rendezvous/" class="post-title-link" itemprop="url">PyTorch 分布式 TCPStore Rendezvous 机制</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2025-06-14 10:50:49" itemprop="dateCreated datePublished" datetime="2025-06-14T10:50:49+08:00">2025-06-14</time>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <hr>
-<h2 id="🧠-背景概述"><a href="#🧠-背景概述" class="headerlink" title="🧠 背景概述"></a>🧠 背景概述</h2><ul>
-<li><strong>目标</strong>：在 <code>init_process_group</code> 中实现跨进程注册、排序及 barrier 同步，为 NCCL&#x2F;Gloo 通信组构建创建一致上下文。</li>
-<li><strong>时序</strong>：所有 <code>set</code>&#x2F;<code>get</code>&#x2F;<code>wait</code> 操作均发生在 NCCL 通信初始化之前（即 rendezvous 阶段）。</li>
-<li><strong>机制</strong>：socket 客户端—服务器模型 + backend 控制同步逻辑。</li>
-</ul>
-<hr>
-<h2 id="1-消息协议格式"><a href="#1-消息协议格式" class="headerlink" title="1. 消息协议格式"></a>1. 消息协议格式</h2><p>客户端向 master 发送的包格式为：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">\[4 B 总长度]\[1 B 操作码]\[4 B key\_len]\[4 B value\_len]\[key]\[value]</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-<ul>
-<li>总长度：网络字节序，不含自身；</li>
-<li>操作码：<code>1=SET</code>, <code>2=GET</code>, <code>3=WAIT</code>；</li>
-<li><code>key_len</code>, <code>value_len</code>：后续字段长度；</li>
-<li><code>key</code>, <code>value</code>：实际数据；</li>
-<li>Master 解析后，回复：<code>OK</code> &#x2F; value 内容 &#x2F; <code>READY</code> 等。</li>
-</ul>
-<hr>
-<h2 id="2-Rendezvous-阶段流程（2-机，4-卡-each，聚焦-rank1-rank5）"><a href="#2-Rendezvous-阶段流程（2-机，4-卡-each，聚焦-rank1-rank5）" class="headerlink" title="2. Rendezvous 阶段流程（2 机，4 卡 each，聚焦 rank1 &amp; rank5）"></a>2. Rendezvous 阶段流程（2 机，4 卡 each，聚焦 rank1 &amp; rank5）</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">flowchart TB</span><br><span class="line">  subgraph A[&quot;Machine A (rank0-3)&quot;]</span><br><span class="line">    master[&quot;TCPStoreBackend (master)&quot;]</span><br><span class="line">    r1[Worker rank1]</span><br><span class="line">    master --- r1</span><br><span class="line">  end</span><br><span class="line">  subgraph B[&quot;Machine B (rank4-7)&quot;]</span><br><span class="line">    r5[Worker rank5]</span><br><span class="line">    master --- r5</span><br><span class="line">  end</span><br><span class="line"></span><br><span class="line">  r1 --&gt;|SET key rank1_addr| master</span><br><span class="line">  r5 --&gt;|SET key rank5_addr| master</span><br><span class="line"></span><br><span class="line">  r1 --&gt;|WAIT  rendezvous_done| master</span><br><span class="line">  r5 --&gt;|WAIT  rendezvous_done| master</span><br><span class="line"></span><br><span class="line">  %% Server: waits until all ranks set, then:</span><br><span class="line">  master --&gt;|write READY| r1</span><br><span class="line">  master --&gt;|write READY| r5</span><br><span class="line"></span><br><span class="line">  %% 完成 WAIT 返回，进入 NCCL 初始化</span><br><span class="line">  r1 --&gt;|recv READY → NCCL init| NCCL_1[NCCL Init rank1]</span><br><span class="line">  r5 --&gt;|recv READY → NCCL init| NCCL_5[NCCL Init rank5]</span><br></pre></td></tr></table></figure>
-
-<h3 id="🧩-步骤解析"><a href="#🧩-步骤解析" class="headerlink" title="🧩 步骤解析"></a>🧩 步骤解析</h3><ol>
-<li><strong>Master</strong> 在端口（如 29500）侦听，接收连接；</li>
-<li><strong>rank1 &#x2F; rank5</strong> 分别发送 <code>SET</code>（注册地址）；</li>
-<li>随后发送 <code>WAIT(&quot;rendezvous_done&quot;)</code>，Socket 处于阻塞状态；</li>
-<li>Master 收集所有 8 个 rank 的 <code>SET</code> 后，遍历 <code>wait</code> 阻塞的连接，逐一写入 <code>READY</code>；</li>
-<li>Worker 收到 <code>READY</code>，退出阻塞，进入 NCCL 初始化阶段；</li>
-<li>随后在这一阶段内：交换 <code>ncclUniqueId</code> (via store), 调用 <code>ncclCommInitRank</code> 构建通信组 (<a target="_blank" rel="noopener" href="https://github.com/pytorch/pytorch/issues/107177?utm_source=chatgpt.com" title="Timeout during NCCL initialization due to store #107177 - GitHub">github.com</a>, <a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/elastic/rendezvous.html?utm_source=chatgpt.com" title="Rendezvous — PyTorch 2.7 documentation">pytorch.org</a>)。</li>
-</ol>
-<hr>
-<h2 id="3-Backend-细节对比"><a href="#3-Backend-细节对比" class="headerlink" title="3. Backend 细节对比"></a>3. Backend 细节对比</h2><table>
-<thead>
-<tr>
-<th>Backend</th>
-<th>I&#x2F;O 模型</th>
-<th>特点与适应性</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><strong>经典 TCPStoreBackend</strong></td>
-<td><code>accept()</code> + per-conn 阻塞&#x2F;POLL</td>
-<td>简单，连接较多时扩展性差</td>
-</tr>
-<tr>
-<td><strong>libuv 异步 Backend</strong></td>
-<td>单线程 event-loop, <code>readable/writeable</code></td>
-<td>默认启用（v2.4+），高并发更优 (<a target="_blank" rel="noopener" href="https://docs.pytorch.org/tutorials/intermediate/TCPStore_libuv_backend.html?utm_source=chatgpt.com" title="Introduction to Libuv TCPStore Backend - PyTorch documentation">docs.pytorch.org</a>)</td>
-</tr>
-</tbody></table>
-<ul>
-<li>libuv backend 使用 <code>uv_read_start</code> 自动分块读取，根据 header 控制拼包；</li>
-<li>注册 <code>WAIT</code> 时，将 conn 保存在 map 中，不立即回写；当条件满足，触发 <code>uv_write()</code> → <code>uv_write_cb</code> 实现唤醒。</li>
-</ul>
-<hr>
-<h2 id="4-partial-key-WAIT-机制"><a href="#4-partial-key-WAIT-机制" class="headerlink" title="4. partial-key WAIT 机制"></a>4. partial-key WAIT 机制</h2><ul>
-<li>客户端可以执行 <code>store.wait([&quot;kA&quot;, &quot;kB&quot;])</code>；</li>
-<li>Master 将此等待登记至 <code>MultiWaitRegistry</code>；</li>
-<li>当 <strong>所有相关 key 均被 <code>SET</code></strong> 后，才统一向该连接写 <code>READY</code>，触发唤醒。</li>
-</ul>
-<hr>
-<h2 id="5-“广播-READY”-的实现机制"><a href="#5-“广播-READY”-的实现机制" class="headerlink" title="5. “广播 READY” 的实现机制"></a>5. “广播 READY” 的实现机制</h2><ul>
-<li>不是通过 NCCL&#x2F;Gloo broadcast 算子；</li>
-<li>Master <strong>遍历挂起的 WAIT sockets，逐个写 READY</strong>；</li>
-<li>为 rendezvous 过程自身提供同步机制，通信组尚未创建。</li>
-</ul>
-<hr>
-<h2 id="6-时间线概览"><a href="#6-时间线概览" class="headerlink" title="6. 时间线概览"></a>6. 时间线概览</h2><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">┌──────────────────────────┐</span><br><span class="line">│ SET/WAIT via TCP Store   │  # rendezvous 阶段</span><br><span class="line">└──────────────────────────┘</span><br><span class="line">            ↓</span><br><span class="line">┌──────────────────────────┐</span><br><span class="line">│ recv READY → wait returns│</span><br><span class="line">└──────────────────────────┘</span><br><span class="line">            ↓</span><br><span class="line">┌──────────────────────────┐</span><br><span class="line">│ NCCL Init                │  # 调用 ncclUniqueId, CommInitRank</span><br><span class="line">└──────────────────────────┘</span><br><span class="line">            ↓</span><br><span class="line">┌──────────────────────────┐</span><br><span class="line">│ Collective Ops (DDP)     │</span><br><span class="line">└──────────────────────────┘</span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="✅-总结要点"><a href="#✅-总结要点" class="headerlink" title="✅ 总结要点"></a>✅ 总结要点</h2><ol>
-<li>标注 <strong>rank1 &#x2F; rank5 的流程图</strong>，更直观；</li>
-<li><code>SET</code> + <code>WAIT</code> 操作全部发生于 rendezvous 阶段，见图；</li>
-<li>Master “广播 READY” 是 socket 写操作，不是通信库广播；</li>
-<li>NCCL 初始化在 rendezvous 完成后进行；</li>
-<li>libuv backend 提供更高效 I&#x2F;O 处理及 message 拼接处理能力 (<a target="_blank" rel="noopener" href="https://docs.pytorch.org/tutorials/intermediate/TCPStore_libuv_backend.html?utm_source=chatgpt.com" title="Introduction to Libuv TCPStore Backend - PyTorch documentation">docs.pytorch.org</a>, <a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/distributed.html?utm_source=chatgpt.com" title="Distributed communication package - torch.distributed">pytorch.org</a>, <a target="_blank" rel="noopener" href="https://github.com/pytorch/pytorch/blob/main/torch/distributed/rendezvous.py?utm_source=chatgpt.com" title="pytorch&#x2F;torch&#x2F;distributed&#x2F;rendezvous.py at main - GitHub">github.com</a>)。</li>
-</ol>
 <hr>
 
       
@@ -1038,7 +1056,7 @@
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
-        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-count">5</span>
         <span class="site-state-item-name">tags</span></a>
       </div>
   </nav>
