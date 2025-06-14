@@ -160,6 +160,82 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2025/06/14/pytorch_tcpstore_rendezvous/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="John Doe">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Hexo">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2025/06/14/pytorch_tcpstore_rendezvous/" class="post-title-link" itemprop="url">PyTorch 分布式 TCPStore Rendezvous 机制</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2025-06-14 10:48:04" itemprop="dateCreated datePublished" datetime="2025-06-14T10:48:04+08:00">2025-06-14</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <hr>
+<h2 id="🧠-背景概述"><a href="#🧠-背景概述" class="headerlink" title="🧠 背景概述"></a>🧠 背景概述</h2><ul>
+<li><strong>目标</strong>：在 <code>init_process_group</code> 中实现跨进程注册、排序及 barrier 同步，为 NCCL&#x2F;Gloo 通信组构建创建一致上下文。</li>
+<li><strong>时序</strong>：所有 <code>set</code>&#x2F;<code>get</code>&#x2F;<code>wait</code> 操作均发生在 NCCL 通信初始化之前（即 rendezvous 阶段）。</li>
+<li><strong>机制</strong>：socket 客户端—服务器模型 + backend 控制同步逻辑。</li>
+</ul>
+<hr>
+<h2 id="1-消息协议格式"><a href="#1-消息协议格式" class="headerlink" title="1. 消息协议格式"></a>1. 消息协议格式</h2><p>客户端向 master 发送的包格式为：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">\[4 B 总长度]\[1 B 操作码]\[4 B key\_len]\[4 B value\_len]\[key]\[value]</span><br><span class="line"></span><br><span class="line">````</span><br><span class="line"></span><br><span class="line">- 总长度：网络字节序，不含自身；</span><br><span class="line">- 操作码：`1=SET`, `2=GET`, `3=WAIT`；</span><br><span class="line">- `key_len`, `value_len`：后续字段长度；</span><br><span class="line">- `key`, `value`：实际数据；</span><br><span class="line">- Master 解析后，回复：`OK` / value 内容 / `READY` 等。</span><br><span class="line"></span><br><span class="line">---</span><br><span class="line"></span><br><span class="line">## 2. Rendezvous 阶段流程（2 机，4 卡 each，聚焦 rank1 &amp; rank5）</span><br><span class="line"></span><br><span class="line">```mermaid</span><br><span class="line">flowchart TB</span><br><span class="line">  subgraph A[&quot;Machine A (rank0-3)&quot;]</span><br><span class="line">    master[&quot;TCPStoreBackend (master)&quot;]</span><br><span class="line">    r1[Worker rank1]</span><br><span class="line">    master --- r1</span><br><span class="line">  end</span><br><span class="line">  subgraph B[&quot;Machine B (rank4-7)&quot;]</span><br><span class="line">    r5[Worker rank5]</span><br><span class="line">    master --- r5</span><br><span class="line">  end</span><br><span class="line"></span><br><span class="line">  r1 --&gt;|SET key rank1_addr| master</span><br><span class="line">  r5 --&gt;|SET key rank5_addr| master</span><br><span class="line"></span><br><span class="line">  r1 --&gt;|WAIT  rendezvous_done| master</span><br><span class="line">  r5 --&gt;|WAIT  rendezvous_done| master</span><br><span class="line"></span><br><span class="line">  %% Server: waits until all ranks set, then:</span><br><span class="line">  master --&gt;|write READY| r1</span><br><span class="line">  master --&gt;|write READY| r5</span><br><span class="line"></span><br><span class="line">  %% 完成 WAIT 返回，进入 NCCL 初始化</span><br><span class="line">  r1 --&gt;|recv READY → NCCL init| NCCL_1[NCCL Init rank1]</span><br><span class="line">  r5 --&gt;|recv READY → NCCL init| NCCL_5[NCCL Init rank5]</span><br><span class="line">````</span><br><span class="line"></span><br><span class="line">### 🧩 步骤解析</span><br><span class="line"></span><br><span class="line">1. **Master** 在端口（如 29500）侦听，接收连接；</span><br><span class="line">2. **rank1 / rank5** 分别发送 `SET`（注册地址）；</span><br><span class="line">3. 随后发送 `WAIT(&quot;rendezvous_done&quot;)`，Socket 处于阻塞状态；</span><br><span class="line">4. Master 收集所有 8 个 rank 的 `SET` 后，遍历 `wait` 阻塞的连接，逐一写入 `READY`；</span><br><span class="line">5. Worker 收到 `READY`，退出阻塞，进入 NCCL 初始化阶段；</span><br><span class="line">6. 随后在这一阶段内：交换 `ncclUniqueId` (via store), 调用 `ncclCommInitRank` 构建通信组 ([github.com][1], [pytorch.org][2])。</span><br><span class="line"></span><br><span class="line">---</span><br><span class="line"></span><br><span class="line">## 3. Backend 细节对比</span><br><span class="line"></span><br><span class="line">| Backend                | I/O 模型                               | 特点与适应性                                    |</span><br><span class="line">| ---------------------- | ------------------------------------ | ----------------------------------------- |</span><br><span class="line">| **经典 TCPStoreBackend** | `accept()` + per-conn 阻塞/POLL        | 简单，连接较多时扩展性差                              |</span><br><span class="line">| **libuv 异步 Backend**   | 单线程 event-loop, `readable/writeable` | 默认启用（v2.4+），高并发更优 ([docs.pytorch.org][3]) |</span><br><span class="line"></span><br><span class="line">* libuv backend 使用 `uv_read_start` 自动分块读取，根据 header 控制拼包；</span><br><span class="line">* 注册 `WAIT` 时，将 conn 保存在 map 中，不立即回写；当条件满足，触发 `uv_write()` → `uv_write_cb` 实现唤醒。</span><br><span class="line"></span><br><span class="line">---</span><br><span class="line"></span><br><span class="line">## 4. partial-key WAIT 机制</span><br><span class="line"></span><br><span class="line">* 客户端可以执行 `store.wait([&quot;kA&quot;, &quot;kB&quot;])`；</span><br><span class="line">* Master 将此等待登记至 `MultiWaitRegistry`；</span><br><span class="line">* 当 **所有相关 key 均被 `SET`** 后，才统一向该连接写 `READY`，触发唤醒。</span><br><span class="line"></span><br><span class="line">---</span><br><span class="line"></span><br><span class="line">## 5. “广播 READY” 的实现机制</span><br><span class="line"></span><br><span class="line">* 不是通过 NCCL/Gloo broadcast 算子；</span><br><span class="line">* Master **遍历挂起的 WAIT sockets，逐个写 READY**；</span><br><span class="line">* 为 rendezvous 过程自身提供同步机制，通信组尚未创建。</span><br><span class="line"></span><br><span class="line">---</span><br><span class="line"></span><br><span class="line">## 6. 时间线概览</span><br><span class="line"></span><br><span class="line">```text</span><br><span class="line">┌──────────────────────────┐</span><br><span class="line">│ SET/WAIT via TCP Store   │  # rendezvous 阶段</span><br><span class="line">└──────────────────────────┘</span><br><span class="line">            ↓</span><br><span class="line">┌──────────────────────────┐</span><br><span class="line">│ recv READY → wait returns│</span><br><span class="line">└──────────────────────────┘</span><br><span class="line">            ↓</span><br><span class="line">┌──────────────────────────┐</span><br><span class="line">│ NCCL Init                │  # 调用 ncclUniqueId, CommInitRank</span><br><span class="line">└──────────────────────────┘</span><br><span class="line">            ↓</span><br><span class="line">┌──────────────────────────┐</span><br><span class="line">│ Collective Ops (DDP)     │</span><br><span class="line">└──────────────────────────┘</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="✅-总结要点"><a href="#✅-总结要点" class="headerlink" title="✅ 总结要点"></a>✅ 总结要点</h2><ol>
+<li>标注 <strong>rank1 &#x2F; rank5 的流程图</strong>，更直观；</li>
+<li><code>SET</code> + <code>WAIT</code> 操作全部发生于 rendezvous 阶段，见图；</li>
+<li>Master “广播 READY” 是 socket 写操作，不是通信库广播；</li>
+<li>NCCL 初始化在 rendezvous 完成后进行；</li>
+<li>libuv backend 提供更高效 I&#x2F;O 处理及 message 拼接处理能力 (<a target="_blank" rel="noopener" href="https://docs.pytorch.org/tutorials/intermediate/TCPStore_libuv_backend.html?utm_source=chatgpt.com" title="Introduction to Libuv TCPStore Backend - PyTorch documentation">docs.pytorch.org</a>, <a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/distributed.html?utm_source=chatgpt.com" title="Distributed communication package - torch.distributed">pytorch.org</a>, <a target="_blank" rel="noopener" href="https://github.com/pytorch/pytorch/blob/main/torch/distributed/rendezvous.py?utm_source=chatgpt.com" title="pytorch&#x2F;torch&#x2F;distributed&#x2F;rendezvous.py at main - GitHub">github.com</a>)。</li>
+</ol>
+<hr>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
     <link itemprop="mainEntityOfPage" href="http://example.com/2025/06/13/pytorch_DeviceMesh/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -871,7 +947,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">4</span>
+          <span class="site-state-item-count">5</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
