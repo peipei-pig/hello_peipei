@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 7.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="一句话总结：Lumos 是一个基于运行时 trace 的建模&#x2F;模拟工具，从 PyTorch Kineto 等采集到的事件中自动恢复精细的执行图（含算-通重叠与跨流依赖），并支持在不重新跑模型的情况下，对 DP&#x2F;PP&#x2F;模型结构 做 “what-if” 修改与快速估算；在 512×H100 集群上回放平均误差约 3.3%。(arXiv)   1. 核心贡献与定位  精细执行图：仅用框架内置的 pr">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Lumos : Efficient Performance Modeling and Estimation for Large-scale LLM Training">
+<meta property="og:url" content="http://example.com/2025/08/17/paper/lumos/index.html">
+<meta property="og:site_name" content="果冻甜甜的">
+<meta property="og:description" content="一句话总结：Lumos 是一个基于运行时 trace 的建模&#x2F;模拟工具，从 PyTorch Kineto 等采集到的事件中自动恢复精细的执行图（含算-通重叠与跨流依赖），并支持在不重新跑模型的情况下，对 DP&#x2F;PP&#x2F;模型结构 做 “what-if” 修改与快速估算；在 512×H100 集群上回放平均误差约 3.3%。(arXiv)   1. 核心贡献与定位  精细执行图：仅用框架内置的 pr">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2025-08-17T09:46:44.626Z">
+<meta property="article:modified_time" content="2025-08-17T09:46:44.626Z">
+<meta property="article:author" content="John Doe">
+<meta property="article:tag" content="paper">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://example.com/2025/08/17/paper/lumos/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+
+  <title>Lumos : Efficient Performance Modeling and Estimation for Large-scale LLM Training | 果冻甜甜的</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">果冻甜甜的</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-首页">
+
+    <a href="/" rel="section"><i class="home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-分类">
+
+    <a href="/categories/" rel="section"><i class="th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-标签">
+
+    <a href="/tags/" rel="section"><i class="tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-归档">
+
+    <a href="/archives/" rel="section"><i class="archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-关于">
+
+    <a href="/about/" rel="section"><i class="user fa-fw"></i>关于</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2025/08/17/paper/lumos/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="John Doe">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="果冻甜甜的">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Lumos : Efficient Performance Modeling and Estimation for Large-scale LLM Training
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2025-08-17 17:46:44" itemprop="dateCreated datePublished" datetime="2025-08-17T17:46:44+08:00">2025-08-17</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/paper/" itemprop="url" rel="index"><span itemprop="name">paper</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <hr />
+<blockquote>
+<p><strong>一句话总结</strong>：<strong>Lumos</strong> 是一个<strong>基于运行时 trace 的建模/模拟工具</strong>，从 PyTorch Kineto 等采集到的事件中<strong>自动恢复精细的执行图</strong>（含算-通重叠与跨流依赖），并支持在不重新跑模型的情况下，对 <strong>DP/PP/模型结构</strong> 做 “what-if” 修改与<strong>快速估算</strong>；在 <strong>512×H100</strong> 集群上回放<strong>平均误差约 3.3%</strong>。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</p>
+</blockquote>
+<hr />
+<h2 id="核心贡献与定位">1. 核心贡献与定位</h2>
+<ul>
+<li><strong>精细执行图</strong>：仅用框架内置的 profiler（如 PyTorch Kineto）即可从 CPU/GPU 事件恢复<strong>四类关键依赖</strong>（CPU→GPU、GPU→CPU、同流顺序、<strong>跨流事件</strong>），精准表达算-通重叠与同步关系。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
+<li><strong>图编辑 &amp; 快速外推</strong>：在<strong>不改动模型/系统</strong>的前提下，从原始 trace-graph 出发，对 <strong>数据并行（DP）</strong>、<strong>流水并行（PP）</strong> 与<strong>模型层数/隐藏维度</strong>做图级改写，再用模拟器<strong>重放一整个迭代</strong>估算性能。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
+<li><strong>高精度回放</strong>：在生产集群 <strong>最多 512×H100</strong>、多种 GPT-3 变体、不同并行策略下，<strong>迭代时间回放平均误差 3.3%</strong>，并能再现实测的执行细分占比。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
+</ul>
+<hr />
+<h2 id="lumos-如何从-trace-构建执行图">2. Lumos 如何从 trace 构建执行图</h2>
+<ul>
+<li><strong>事件来源</strong>：直接使用 PyTorch/TensorFlow 的<strong>内置 profiler</strong>（如 Kineto），无需对模型或框架做侵入式改造。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
+<li><p><strong>依赖建模（四类）</strong>：</p>
+<ol type="1">
+<li><strong>CPU→GPU（launch）</strong>：用 <strong>correlation ID</strong> 绑定 CPU 端的 <code>cudaLaunchKernel</code>/<code>cudaMemsetAsync</code> 与对应的 GPU kernel。</li>
+<li><strong>GPU→CPU（同步）</strong>：<code>cudaDeviceSync</code>/<code>cudaStreamSync</code> 等需要等到相关 GPU kernel 完成。</li>
+<li><strong>同流顺序</strong>：同一 CUDA stream 内核严格顺序。</li>
+<li><strong>跨流事件</strong>：<code>cudaEventRecord</code> 与 <code>cudaStreamWaitEvent</code> 形成“记录→等待”的跨流依赖，表达<strong>不同流</strong>间的有序性。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
+</ol></li>
+</ul>
+<hr />
+<h2 id="图编辑支持哪些-what-if-改动">3. 图编辑：支持哪些 “what-if” 改动</h2>
+<ul>
+<li><strong>数据并行（DP）</strong>：只需<strong>调整通信任务</strong>（如梯度规约类）的执行时间；本地计算不变。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
+<li><p><strong>流水并行（PP）</strong>：</p>
+<ul>
+<li>先按所选调度（如 <strong>1F1B</strong>）更新各微批的前后向顺序；</li>
+<li>将原图中任务<strong>按层聚类</strong>后重分配到新 stage；</li>
+<li>在 stage 边界插入/重连<strong>激活与梯度</strong>的 send/recv；</li>
+<li>保留原 trace 中的<strong>依赖模式</strong>以保证可重放正确性。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
+</ul></li>
+<li><p><strong>模型结构</strong>：</p>
+<ul>
+<li><strong>隐藏维度</strong>变更：重写相关算子/内核的输入张量维度并<strong>重估时长</strong>；</li>
+<li><strong>层数</strong>变更：复制/删减层块并<strong>重连依赖与通信</strong>。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
+</ul></li>
+<li><p><strong>暂不支持</strong>：<strong>修改 Tensor Parallelism（TP）</strong>（通常受限于单机且通信重，留作未来工作）。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</p></li>
+</ul>
+<hr />
+<h2 id="模拟器事件驱动流程论文算法-1-的要点">4. 模拟器：事件驱动流程（论文算法 1 的要点）</h2>
+<ul>
+<li><p>维护两个集合：</p>
+<ul>
+<li><strong>固定依赖</strong>（初始化阶段一次性确定，如同线程/同流顺序、CPU→GPU 的 launch 边）；</li>
+<li><strong>运行期依赖</strong>（例如 <code>cudaStreamSync</code> 需要等待**该流上“最后一个 kernel”**完成，这个“最后”要在调度时才能确定）。</li>
+</ul></li>
+<li><p>主循环：从就绪集合取任务 → 分配到其“处理器”（CPU 线程/CUDA stream）上运行 → 更新处理器可用时间与后继任务的最早可启动时间；若仍有运行期依赖未满足则<strong>延后</strong>。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</p></li>
+</ul>
+<hr />
+<h2 id="评测设置与关键数字">5. 评测设置与关键数字</h2>
+<ul>
+<li><strong>规模与环境</strong>：<strong>最多 512×H100（32 台主机）</strong>，RoCE 数据中心网络（<strong>每主机 8×400Gbps</strong>），CUDA <strong>12.4</strong>，PyTorch <strong>2.5</strong>，Transformer Engine <strong>0.12.0</strong>，Lightning <strong>1.9.4</strong>。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
+<li><strong>对比基线</strong>：与 <strong>dPRO</strong>（trace-driven 回放系统）相比，Lumos 在复杂并行配置下能更好捕捉<strong>跨流依赖</strong>与算-通重叠，显著降低回放误差。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
+<li><strong>结果</strong>：回放<strong>平均误差 ~3.3%</strong>；并展示在 <strong>DP/PP/结构</strong>外推时的估算准确性与执行细分（暴露计算/暴露通信/重叠/其他）。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
+</ul>
+<hr />
+<h2 id="工程实现与使用门槛">6. 工程实现与使用门槛</h2>
+<ul>
+<li><strong>实现规模</strong>：约 <strong>5,200 行 Python</strong>。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
+<li><strong>接入成本</strong>：在训练代码里<strong>插入 ~10 行 profiler hook</strong> 采集 Kineto trace，随后走<strong>自动化</strong>流程：<strong>建图 → 图编辑 → 模拟估算</strong>。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
+</ul>
+<hr />
+<h2 id="适用不适用场景">7. 适用/不适用场景</h2>
+<ul>
+<li><p><strong>适用</strong>：</p>
+<ul>
+<li>需要在真实机群外<strong>快速比较</strong>并行/结构配置（DP/PP/层数/隐藏维）并估算收益；</li>
+<li>需要<strong>高保真回放</strong>来定位算-通重叠与跨流同步处的性能瓶颈。</li>
+</ul></li>
+<li><p><strong>当前不适用/注意</strong>：</p>
+<ul>
+<li><strong>修改 TP</strong> 的外推（论文暂未支持）；</li>
+<li>追求 FLOPs、内存、带宽、能耗等<strong>系统级指标</strong>（论文称为<strong>后续计划</strong>）；</li>
+<li>估算假设<strong>新配置可正常运行</strong>（不考虑 OOM 等失效情形）。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
+</ul></li>
+</ul>
+<hr />
+<h2 id="与既有工作的关系示例dpro">8. 与既有工作的关系（示例：dPRO）</h2>
+<ul>
+<li><strong>dPRO</strong> 同样是 trace-driven 的性能诊断/回放系统，但在复杂 LLM 并行下，<strong>跨流依赖</strong>与重叠的精细建模更困难，容易导致过度乐观的并行预测；Lumos 在这些方面做了系统增强并显著降低误差。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
+</ul>
+<hr />
+<h2 id="论文与会议信息可引用">9. 论文与会议信息（可引用）</h2>
+<ul>
+<li>论文（arXiv）：<strong>“Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training”</strong>（2025-04-12 首次提交）。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2504.09307?utm_source=chatgpt.com" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
+<li>PDF（作者主页镜像/MLSys 论文）：可下载全文。(<a target="_blank" rel="noopener" href="https://mingyu-liang.github.io/files/mlsys25-lumos.pdf?utm_source=chatgpt.com" title="Lumos: Efficient Performance Modeling and Estimation for ...">mingyu-liang.github.io</a>)</li>
+<li><strong>MLSys 2025</strong> 接收与日程页面（含报告/录播入口）。(<a target="_blank" rel="noopener" href="https://mlsys.org/virtual/2025/papers.html?utm_source=chatgpt.com" title="MLSys 2025 Papers">mlsys.org</a>)</li>
+</ul>
+<hr />
+<h2 id="代码与开源状态截至-2025-08-15">10. 代码与开源状态（截至 2025-08-15）</h2>
+<ul>
+<li><strong>未见官方代码库链接</strong>（arXiv/MLSys 页面与作者 PDF 中均未提供），社区里存在<strong>同名但无关</strong>的 “Lumos” 项目（如 Agent/视频生成/视觉等），注意区分。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2504.09307?utm_source=chatgpt.com" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>, <a target="_blank" rel="noopener" href="https://mlsys.org/virtual/2025/papers.html?utm_source=chatgpt.com" title="MLSys 2025 Papers">mlsys.org</a>, <a target="_blank" rel="noopener" href="https://github.com/allenai/lumos?utm_source=chatgpt.com" title="Code and data for &quot;Lumos: Learning Agents with Unified ...">GitHub</a>)</li>
+</ul>
+<hr />
+<h2 id="快速上手示意">11. 快速上手（示意）</h2>
+<blockquote>
+<p>采集 <strong>Kineto trace</strong> → 构建执行图 → 在图上编辑（DP/PP/结构）→ 模拟回放/估算。 论文正文给出了典型的 <strong>PyTorch profiler</strong> 用法示意与全流程示意图。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</p>
+</blockquote>
+<hr />
+<h2 id="你可能关心的细节精炼版">12. 你可能关心的细节（精炼版）</h2>
+<ul>
+<li><p><strong>为什么更准？</strong></p>
+<ul>
+<li>用 <strong>correlation ID</strong> 串起 CPU launch 与 GPU kernel；</li>
+<li>显式恢复 <strong>跨流事件</strong>（Record/Wait）与<strong>同步</strong>（Stream/Device Sync）；</li>
+<li>在模拟器中将依赖分为<strong>固定</strong>与<strong>运行期</strong>，确保像 “<strong>等待该流最后一个 kernel</strong>” 这类语义被正确表达。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
+</ul></li>
+<li><p><strong>改 DP/PP 怎么算？</strong></p>
+<ul>
+<li><strong>DP</strong>：只重赋通信任务时长；</li>
+<li><strong>PP</strong>：更新调度（如 1F1B）→ 任务按层分组并<strong>重分 stage</strong> → 在边界插入 send/recv → 保持依赖闭合。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
+</ul></li>
+</ul>
+<hr />
+<h3 id="参考文献-链接">参考文献 / 链接</h3>
+<ul>
+<li>Lumos 论文（arXiv 页面与 PDF）：(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2504.09307?utm_source=chatgpt.com" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
+<li>Lumos（MLSys 2025 会议页面/日程/录播）：(<a target="_blank" rel="noopener" href="https://mlsys.org/virtual/2025/papers.html?utm_source=chatgpt.com" title="MLSys 2025 Papers">mlsys.org</a>)</li>
+<li>dPRO（trace-driven 回放基线论文）：(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2205.02473?utm_source=chatgpt.com" title="dPRO: A Generic Performance Diagnosis and Optimization ...">arXiv</a>)</li>
+</ul>
+<hr />
+<blockquote>
+<p>注：本文档只摘取对工程落地最关键的事实与方法，更多图例（如 <strong>PP×TP</strong> 微批调度示例）与完整算法细节请参阅原论文正文与附图。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</p>
+</blockquote>
+<hr />
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/paper/" rel="tag"># paper</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2025/08/17/distribute/attention/" rel="prev" title="Attention TP与GQA">
+      <i class="fa fa-chevron-left"></i> Attention TP与GQA
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A0%B8%E5%BF%83%E8%B4%A1%E7%8C%AE%E4%B8%8E%E5%AE%9A%E4%BD%8D"><span class="nav-number">1.</span> <span class="nav-text">1. 核心贡献与定位</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#lumos-%E5%A6%82%E4%BD%95%E4%BB%8E-trace-%E6%9E%84%E5%BB%BA%E6%89%A7%E8%A1%8C%E5%9B%BE"><span class="nav-number">2.</span> <span class="nav-text">2. Lumos 如何从 trace 构建执行图</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%BE%E7%BC%96%E8%BE%91%E6%94%AF%E6%8C%81%E5%93%AA%E4%BA%9B-what-if-%E6%94%B9%E5%8A%A8"><span class="nav-number">3.</span> <span class="nav-text">3. 图编辑：支持哪些 “what-if” 改动</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A8%A1%E6%8B%9F%E5%99%A8%E4%BA%8B%E4%BB%B6%E9%A9%B1%E5%8A%A8%E6%B5%81%E7%A8%8B%E8%AE%BA%E6%96%87%E7%AE%97%E6%B3%95-1-%E7%9A%84%E8%A6%81%E7%82%B9"><span class="nav-number">4.</span> <span class="nav-text">4. 模拟器：事件驱动流程（论文算法 1 的要点）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AF%84%E6%B5%8B%E8%AE%BE%E7%BD%AE%E4%B8%8E%E5%85%B3%E9%94%AE%E6%95%B0%E5%AD%97"><span class="nav-number">5.</span> <span class="nav-text">5. 评测设置与关键数字</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B7%A5%E7%A8%8B%E5%AE%9E%E7%8E%B0%E4%B8%8E%E4%BD%BF%E7%94%A8%E9%97%A8%E6%A7%9B"><span class="nav-number">6.</span> <span class="nav-text">6. 工程实现与使用门槛</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%80%82%E7%94%A8%E4%B8%8D%E9%80%82%E7%94%A8%E5%9C%BA%E6%99%AF"><span class="nav-number">7.</span> <span class="nav-text">7. 适用&#x2F;不适用场景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%8E%E6%97%A2%E6%9C%89%E5%B7%A5%E4%BD%9C%E7%9A%84%E5%85%B3%E7%B3%BB%E7%A4%BA%E4%BE%8Bdpro"><span class="nav-number">8.</span> <span class="nav-text">8. 与既有工作的关系（示例：dPRO）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%BA%E6%96%87%E4%B8%8E%E4%BC%9A%E8%AE%AE%E4%BF%A1%E6%81%AF%E5%8F%AF%E5%BC%95%E7%94%A8"><span class="nav-number">9.</span> <span class="nav-text">9. 论文与会议信息（可引用）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%A3%E7%A0%81%E4%B8%8E%E5%BC%80%E6%BA%90%E7%8A%B6%E6%80%81%E6%88%AA%E8%87%B3-2025-08-15"><span class="nav-number">10.</span> <span class="nav-text">10. 代码与开源状态（截至 2025-08-15）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BF%AB%E9%80%9F%E4%B8%8A%E6%89%8B%E7%A4%BA%E6%84%8F"><span class="nav-number">11.</span> <span class="nav-text">11. 快速上手（示意）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%A0%E5%8F%AF%E8%83%BD%E5%85%B3%E5%BF%83%E7%9A%84%E7%BB%86%E8%8A%82%E7%B2%BE%E7%82%BC%E7%89%88"><span class="nav-number">12.</span> <span class="nav-text">12. 你可能关心的细节（精炼版）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%8C%AE-%E9%93%BE%E6%8E%A5"><span class="nav-number">12.1.</span> <span class="nav-text">参考文献 &#x2F; 链接</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">John Doe</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">7</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+        <span class="site-state-item-count">5</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">浙ICP备2024078386号 </a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">John Doe</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+</body>
+</html>
