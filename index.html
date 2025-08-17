@@ -184,7 +184,7 @@
               </span>
               <span class="post-meta-item-text">Posted on</span>
 
-              <time title="Created: 2025-08-17 19:21:30" itemprop="dateCreated datePublished" datetime="2025-08-17T19:21:30+08:00">2025-08-17</time>
+              <time title="Created: 2025-08-17 19:25:37" itemprop="dateCreated datePublished" datetime="2025-08-17T19:25:37+08:00">2025-08-17</time>
             </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -207,33 +207,10 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <blockquote>
-<p>这是一份可扩展的 Markdown 速查表，涵盖你刚才问到的 (1)~(8) 点，并补充了高频命令与常见坑。后续你可以在各小节继续追加示例与最佳实践。</p>
-</blockquote>
-<hr />
-<h2 id="目录">目录</h2>
-<ul>
-<li><a href="#1-磁盘占用与排序dusort">1. 磁盘占用与排序（du/sort）</a></li>
-<li><a href="#2-文本搜索grep">2. 文本搜索（grep）</a></li>
-<li><a href="#3-文件路径查找findlocate">3. 文件路径查找（find/locate）</a></li>
-<li><a href="#4-常见网络工具安装包">4. 常见网络工具安装包</a></li>
-<li><a href="#5-进程查杀killpkillkillall">5. 进程查杀（kill/pkill/killall）</a></li>
-<li><a href="#6-高频命令清单与示例">6. 高频命令清单与示例</a></li>
-<li><a href="#7-小贴士与常见坑">7. 小贴士与常见坑</a></li>
-<li><a href="#8-参考模板一页式磁盘分析--文本搜索">8. 参考模板：一页式磁盘分析 &amp; 文本搜索</a></li>
-</ul>
-<hr />
+          <hr />
 <h2 id="磁盘占用与排序dusort">1. 磁盘占用与排序（du/sort）</h2>
 <h3 id="常用写法">常用写法</h3>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 按“当前目录的直接子项”汇总（人类可读），并按大小倒序</span></span><br><span class="line"><span class="built_in">du</span> -h --max-depth=1 . | <span class="built_in">sort</span> -hr</span><br><span class="line"></span><br><span class="line"><span class="comment"># 仅统计每个条目总大小（不显示子层级），并对条目排序</span></span><br><span class="line"><span class="built_in">du</span> -sh -- * | <span class="built_in">sort</span> -h</span><br></pre></td></tr></table></figure>
-<ul>
-<li>你的写法 <code>du -h -d 0 * | sort -hr</code> 在 Ubuntu（GNU du）上通常可用，但 <code>--max-depth=1</code> / <code>-s</code> 更常见。</li>
-<li><p><code>*</code> 不包含隐藏项；如需包含，可改为：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">du</span> -sh -- .* * 2&gt;/dev/null | <span class="built_in">sort</span> -h</span><br></pre></td></tr></table></figure></li>
-<li><p>交互式工具推荐：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sudo</span> apt-get update</span><br><span class="line"><span class="built_in">sudo</span> apt-get install -y ncdu</span><br><span class="line">ncdu  <span class="comment"># 更直观地排查大文件/目录</span></span><br></pre></td></tr></table></figure></li>
-</ul>
-<hr />
+<h2 id="section"><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 按“当前目录的直接子项”汇总（人类可读），并按大小倒序</span></span><br><span class="line"><span class="built_in">du</span> -h --max-depth=1 . | <span class="built_in">sort</span> -hr</span><br><span class="line"></span><br><span class="line"><span class="comment"># 仅统计每个条目总大小（不显示子层级），并对条目排序</span></span><br><span class="line"><span class="built_in">du</span> -sh -- * | <span class="built_in">sort</span> -h</span><br></pre></td></tr></table></figure></h2>
 <h2 id="文本搜索grep">2. 文本搜索（grep）</h2>
 <h3 id="基础">基础</h3>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">grep <span class="string">&quot;keyword&quot;</span> file.txt          <span class="comment"># 在单个文件中查找</span></span><br><span class="line">grep -n <span class="string">&quot;keyword&quot;</span> file.txt       <span class="comment"># 显示行号</span></span><br><span class="line">grep -i <span class="string">&quot;keyword&quot;</span> file.txt       <span class="comment"># 忽略大小写</span></span><br></pre></td></tr></table></figure>
@@ -258,8 +235,7 @@
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ping</span></span><br><span class="line"><span class="built_in">sudo</span> apt-get install -y iputils-ping</span><br><span class="line"></span><br><span class="line"><span class="comment"># ifconfig（老工具，仍常见）</span></span><br><span class="line"><span class="built_in">sudo</span> apt-get install -y net-tools</span><br><span class="line"><span class="comment"># 现代替代：ip（通常已自带于 iproute2）</span></span><br><span class="line">ip addr</span><br><span class="line">ip <span class="built_in">link</span></span><br><span class="line">ip route</span><br><span class="line"></span><br><span class="line"><span class="comment"># killall</span></span><br><span class="line"><span class="built_in">sudo</span> apt-get install -y psmisc</span><br></pre></td></tr></table></figure>
 <hr />
 <h2 id="进程查杀killpkillkillall">5. 进程查杀（kill/pkill/killall）</h2>
-<h3 id="你的原命令与风险">你的原命令与风险</h3>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 可能可行，但会匹配到 grep 自身、也会取到表头</span></span><br><span class="line">ps -ef | grep python3 | awk <span class="string">&#x27;&#123;print $2&#125;&#x27;</span> | xargs <span class="built_in">kill</span> -9</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ps -ef | grep python3 | awk <span class="string">&#x27;&#123;print $2&#125;&#x27;</span> | xargs <span class="built_in">kill</span> -9</span><br></pre></td></tr></table></figure>
 <h3 id="更安全的做法">更安全的做法</h3>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 优雅终止（SIGTERM）；无 PID 时不执行 (-r)</span></span><br><span class="line">pgrep -f python3 | xargs -r <span class="built_in">kill</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 直接按名称匹配（优雅终止），必要时再 -9</span></span><br><span class="line">pkill -f python3</span><br><span class="line">pkill -9 -f python3</span><br><span class="line"></span><br><span class="line"><span class="comment"># 避免匹配到 grep 自身</span></span><br><span class="line">ps -ef | grep <span class="string">&#x27;[p]ython3&#x27;</span> | awk <span class="string">&#x27;&#123;print $2&#125;&#x27;</span> | xargs -r <span class="built_in">kill</span></span><br></pre></td></tr></table></figure>
 <blockquote>
