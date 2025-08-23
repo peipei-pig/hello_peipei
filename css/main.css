@@ -1196,7 +1196,7 @@ pre .javascript .function {
 }
 .links-of-author a::before,
 .links-of-author span.exturl::before {
-  background: #140d16;
+  background: #ffffc9;
   border-radius: 50%;
   content: ' ';
   display: inline-block;
@@ -2619,9 +2619,20 @@ hr {
   margin: 0 0.25rem;
   opacity: 0.8;
 }
+/* —— 仅隐藏导航里的放大镜图标，保留“Search”文字 —— */
 .menu-item-search i,
 .menu-item-search .menu-item-icon,
 .menu-item-search .fa,
-.menu-item-search .fa-search {
+.menu-item-search [class*="fa-"],
+.menu-item-search svg,
+.menu-item-search a::before {
   display: none !important;
+}
+/* 去掉为图标预留的间距，让“Search”贴左 */
+.menu-item-search .menu-item-label {
+  margin-left: 0 !important;
+}
+/* Mist / Muse 下常见：icon 会占固定宽度，强制归零 */
+.site-nav .menu-item-search .menu-item-icon {
+  width: 0 !important;
 }
