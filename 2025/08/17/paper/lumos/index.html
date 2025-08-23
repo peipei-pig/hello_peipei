@@ -647,26 +647,7 @@
     
 
   
-<!-- source/_data/body-end.njk -->
-<meta data-debug="bodyEnd-ok">
-<script>
-(function () {
-  var enable = location.search.includes('mockpv=1') || localStorage.getItem('mockpv') === '1';
-  if (!enable) return;
-  function showPV(n) {
-    var el1 = document.getElementById('busuanzi_value_page_pv');
-    var c1  = document.getElementById('busuanzi_container_page_pv');
-    if (el1) el1.textContent = Number(n).toLocaleString();
-    if (c1)  c1.style.display = 'inline';
-  }
-  function run() {
-    var sp = new URL(location.href).searchParams;
-    var pv = Number(sp.get('pv')) || 1234;
-    showPV(pv);
-  }
-  run();
-})();
-</script>
+<script defer src="https://events.vercount.one/js"></script>
 
 </body>
 </html>
