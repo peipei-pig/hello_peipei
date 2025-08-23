@@ -1196,7 +1196,7 @@ pre .javascript .function {
 }
 .links-of-author a::before,
 .links-of-author span.exturl::before {
-  background: #7dffff;
+  background: #140d16;
   border-radius: 50%;
   content: ' ';
   display: inline-block;
@@ -2618,4 +2618,10 @@ hr {
 .site-meta-counts .post-meta-item-text {
   margin: 0 0.25rem;
   opacity: 0.8;
+}
+.menu-item-search i,
+.menu-item-search .menu-item-icon,
+.menu-item-search .fa,
+.menu-item-search .fa-search {
+  display: none !important;
 }
