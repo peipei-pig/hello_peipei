@@ -1196,7 +1196,7 @@ pre .javascript .function {
 }
 .links-of-author a::before,
 .links-of-author span.exturl::before {
-  background: #ffff2d;
+  background: #0ed4ff;
   border-radius: 50%;
   content: ' ';
   display: inline-block;
@@ -2589,82 +2589,61 @@ hr {
 .sub-menu .menu-item {
   display: inline-block;
 }
-.category-all-title {
-  display: none !important;
-}
-.tag-cloud-title {
-  display: none !important;
-}
+/* —— 分类/标签页标题精简 —— */
+.category-all-title,
+.tag-cloud-title,
 .collection-header {
   display: none !important;
 }
-/* 文章卡片更有层次（首页 & 列表） */
+/* —— 列表页文章块更紧凑 —— */
+.index.posts-expand article.post-block,
+.index.posts-expand article.post {
+  margin: 0 0 10px !important;
+  padding-bottom: 6px !important;
+}
+.index.posts-expand .post-header {
+  margin-bottom: 4px !important;
+}
+.index.posts-expand .post-title {
+  margin: 0 !important;
+  line-height: 1.35;
+}
+.index.posts-expand .post-meta {
+  margin: 0 0 4px !important;
+}
+.index.posts-expand .post-body {
+  margin: 0 !important;
+}
+.index.posts-expand .post-body p {
+  margin: 0 !important;
+}
+.index.posts-expand .post-eof {
+  display: none !important;
+}
+.index.posts-expand hr {
+  margin: 6px 0 !important;
+}
+.index.posts-expand .post-button {
+  margin-top: 6px !important;
+}
+/* —— 文章卡片观感（可选） —— */
 .post-block {
   border-radius: 14px;
   box-shadow: 0 6px 22px rgba(0,0,0,0.06);
   padding: 1.2rem 1.4rem;
 }
-/* 标题悬停更明显，但不浮夸 */
-.post-title-link:hover {
-  text-decoration: none;
-  opacity: 0.85;
-  filter: saturate(1.1);
-}
-/* 正文更宽一点（Muse/Mist 单栏下） */
-.main-inner {
-  max-width: 880px;
-}
-/* 页脚统计行更克制 */
-.site-meta-counts .post-meta-item-text {
-  margin: 0 0.25rem;
-  opacity: 0.8;
-}
-/* —— 仅隐藏导航里的放大镜图标，保留“Search”文字 —— */
+/* —— 导航里只留“Search”文字 —— */
 .menu-item-search i,
 .menu-item-search .menu-item-icon,
-.menu-item-search .fa,
-.menu-item-search [class*="fa-"],
+.menu-item-search [class*='fa-'],
 .menu-item-search svg,
 .menu-item-search a::before {
   display: none !important;
 }
-/* 去掉为图标预留的间距，让“Search”贴左 */
 .menu-item-search .menu-item-label {
   margin-left: 0 !important;
 }
-/* Mist / Muse 下常见：icon 会占固定宽度，强制归零 */
-.site-nav .menu-item-search .menu-item-icon {
-  width: 0 !important;
-}
-/* 紧凑首页列表：压缩文章块的外边距与分隔 */
-.posts-expand .post-block,
-.posts-expand .post {
-  margin: 0 0 12px;
-  padding-bottom: 8px;
-}
-.posts-expand .post-header {
-  margin-bottom: 4px;
-}
-.posts-expand .post-title {
-  margin: 0;
-  line-height: 1.35;
-}
-.posts-expand .post-meta {
-  margin: 0 0 4px;
-}
-.posts-expand .post-body {
-  margin: 0;
-/* 摘要段落再压一点 */
-}
-.posts-expand .post-body p {
-  margin: 0;
-}
-.posts-expand .post-eof {
-  display: none;
-}
-.posts-expand hr {
-  margin: 8px 0;
-}
-.posts-expand .post-button {
-  margin-top: 6px;
+/* —— 正文容器略放宽（Mist/Muse 单栏）—— */
+.main-inner {
+  max-width: 880px;
 }
