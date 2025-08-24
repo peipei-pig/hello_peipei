@@ -22,13 +22,13 @@
 
   <meta name="description" content="1. 基本概念与进程组 2. 基本张量通信 3. 对象列表通信 4. 易错点与常见问题 5. 批量点对点通信接口 6. 总结补充 7. 参考资料   1. 基本概念与进程组  group（通信组）：分布式通信时的「子集」，允许只在一部分 rank 之间通信。 global rank：全局进程编号（进程启动时分配的编号）。 group rank：组内进程编号，组内第几个进程（与 global ra">
 <meta property="og:type" content="article">
-<meta property="og:title" content="pytorch send recv 用法详解">
+<meta property="og:title" content="pytorch send and recv">
 <meta property="og:url" content="https://yaopepe.com/2025/06/14/distribute/send_recv/index.html">
 <meta property="og:site_name" content="果冻甜甜的">
 <meta property="og:description" content="1. 基本概念与进程组 2. 基本张量通信 3. 对象列表通信 4. 易错点与常见问题 5. 批量点对点通信接口 6. 总结补充 7. 参考资料   1. 基本概念与进程组  group（通信组）：分布式通信时的「子集」，允许只在一部分 rank 之间通信。 global rank：全局进程编号（进程启动时分配的编号）。 group rank：组内进程编号，组内第几个进程（与 global ra">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2025-06-14T11:52:36.804Z">
-<meta property="article:modified_time" content="2025-06-14T11:52:36.804Z">
+<meta property="article:modified_time" content="2025-08-24T07:37:37.223Z">
 <meta property="article:author" content="PePe">
 <meta property="article:tag" content="send recv">
 <meta name="twitter:card" content="summary">
@@ -46,7 +46,7 @@
   };
 </script>
 
-  <title>pytorch send recv 用法详解 | 果冻甜甜的</title>
+  <title>pytorch send and recv | 果冻甜甜的</title>
   
 
 

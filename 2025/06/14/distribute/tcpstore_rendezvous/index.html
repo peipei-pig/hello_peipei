@@ -22,13 +22,13 @@
 
   <meta name="description" content="🧠 背景概述  目标：在 init_process_group 中实现跨进程注册、排序及 barrier 同步，为 NCCL&#x2F;Gloo 通信组构建创建一致上下文。 时序：所有 set&#x2F;get&#x2F;wait 操作均发生在 NCCL 通信初始化之前（即 rendezvous 阶段）。 机制：socket 客户端—服务器模型 + backend 控制同步逻辑。   1. 消息协议格式 客户端向 mast">
 <meta property="og:type" content="article">
-<meta property="og:title" content="PyTorch 分布式 TCPStore Rendezvous 机制">
+<meta property="og:title" content="pyTorch中TCPStore Rendezvous机制">
 <meta property="og:url" content="https://yaopepe.com/2025/06/14/distribute/tcpstore_rendezvous/index.html">
 <meta property="og:site_name" content="果冻甜甜的">
 <meta property="og:description" content="🧠 背景概述  目标：在 init_process_group 中实现跨进程注册、排序及 barrier 同步，为 NCCL&#x2F;Gloo 通信组构建创建一致上下文。 时序：所有 set&#x2F;get&#x2F;wait 操作均发生在 NCCL 通信初始化之前（即 rendezvous 阶段）。 机制：socket 客户端—服务器模型 + backend 控制同步逻辑。   1. 消息协议格式 客户端向 mast">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2025-06-14T11:52:48.781Z">
-<meta property="article:modified_time" content="2025-06-14T11:52:48.781Z">
+<meta property="article:modified_time" content="2025-08-24T07:38:27.085Z">
 <meta property="article:author" content="PePe">
 <meta property="article:tag" content="tcpstore">
 <meta name="twitter:card" content="summary">
@@ -46,7 +46,7 @@
   };
 </script>
 
-  <title>PyTorch 分布式 TCPStore Rendezvous 机制 | 果冻甜甜的</title>
+  <title>pyTorch中TCPStore Rendezvous机制 | 果冻甜甜的</title>
   
 
 
