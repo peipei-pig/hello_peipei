@@ -198,9 +198,279 @@
           <div class="content post posts-expand">
             
 
+    
   
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="https://yaopepe.com/2025/08/17/distribute/attention/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="PePe">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="果冻甜甜的">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          attention中张量并行与GQA
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2025-08-17 17:23:33" itemprop="dateCreated datePublished" datetime="2025-08-17T17:23:33+08:00">2025-08-17</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2025-08-24 15:41:03" itemprop="dateModified" datetime="2025-08-24T15:41:03+08:00">2025-08-24</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/distribute/" itemprop="url" rel="index"><span itemprop="name">distribute</span></a>
+                </span>
+            </span>
+
+          
+
+<span class="post-meta-item">
+  <span class="post-meta-item-icon"><i class="fa fa-eye"></i></span>
+  <span class="post-meta-item-text">Views:</span>
+  <span id="vercount_value_page_pv">0</span>  
+</span>
 
 
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <hr />
+<blockquote>
+<p>例子配置（贯穿全文）： <code>hidden_size=4096, num_attention_heads=32, tensor_parallel_size=4, num_query_groups=8（GQA）, kv_channels=hidden/heads=128</code>。 输入形状用 <code>[B, S, H]</code> 记（批、序列、隐藏）。</p>
+</blockquote>
+<hr />
+<h2 id="名词与派生变量先把量算清楚">1. 名词与派生变量（先把量算清楚）</h2>
+<ul>
+<li>单头维度（也是缩放用的 <span class="math inline">\(d_k\)</span>）：<code>kv_channels = 4096 / 32 = 128</code></li>
+<li>Q 投影总维：<code>query_projection_size = kv_channels * num_attention_heads = 128*32 = 4096</code></li>
+<li>K/V 投影总维（<strong>GQA</strong>）：<code>kv_projection_size = kv_channels * num_query_groups = 128*8 = 1024</code></li>
+<li>每卡 Q 头数：<code>num_attention_heads_per_partition = 32 / TP = 8</code></li>
+<li>每卡 KV 组数：<code>num_query_groups_per_partition = 8 / TP = 2</code></li>
+<li>每卡投影维（列并行后本地输出维）：<code>hidden_size_per_partition = 4096 / TP = 1024</code></li>
+</ul>
+<blockquote>
+<p>GQA 的含义：当 <code>num_key_value_heads (=num_query_groups)</code> 小于 <code>num_attention_heads</code> 时，为较少的 <strong>KV 头/组</strong> 产出 K/V，让多个 Q 头共享它们；<code>=heads</code> 退化为 MHA，<code>=1</code> 是 MQA。这一点在 HF 模型文档中是明确的定义。(<a target="_blank" rel="noopener" href="https://huggingface.co/docs/transformers/en/model_doc/qwen2?utm_source=chatgpt.com" title="Qwen2">Hugging Face</a>)</p>
+</blockquote>
+<hr />
+<h2 id="端到端计算与形状流以单层自注意力为例">2. 端到端计算与形状流（以单层自注意力为例）</h2>
+<p>Megatron 经典做法：<strong>Q/K/V 的线性层用列并行（Column-Parallel）</strong>，按输出列切给各卡；<strong>输出投影用行并行（Row-Parallel）</strong>，按输入行切给各卡，前向只在输出投影<strong>做一次 all-reduce</strong>。这是 Megatron-LM 论文与 Megatron-Core 文档推荐的张量并行切法。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>, <a target="_blank" rel="noopener" href="https://docs.nvidia.com/megatron-core/developer-guide/latest/api-guide/tensor_parallel.html?utm_source=chatgpt.com" title="tensor_parallel package">NVIDIA Docs</a>)</p>
+<h3 id="线性投影列并行">2.1 线性投影（列并行）</h3>
+<ul>
+<li><strong>Q 投影</strong>（全局权重 <code>[4096,4096]</code> → 每卡 <code>[4096,1024]</code>）： 本卡输出 <code>Q_local: [B,S,1024]</code> → <strong>reshape</strong> 为 <code>[B, 8, S, 128]</code>（本卡 8 个 Q 头）。</li>
+<li><strong>K 投影</strong>（全局权重 <code>[4096,1024]</code> → 每卡 <code>[4096,256]</code>）： <code>K_local: [B,S,256]</code> → <strong>reshape</strong> 为 <code>[B, 2, S, 128]</code>（本卡 2 个 KV 组）。</li>
+<li><strong>V 投影</strong> 同 K。</li>
+</ul>
+<blockquote>
+<p>为什么必须 reshape 出 <strong>head 维</strong>？ 多头注意力的语义是“<strong>头内独立</strong>”的点积注意力，内核（SDPA/FlashAttention）与广播（mask、RoPE、<code>repeat_kv</code>）都要求显式的 head 维 <code>[B,H,S,D]</code> 或展平为 <code>[B·H,S,D]</code>。不拆头会把不同 head 的子空间混在一起，也无法自然执行 GQA 的 <code>repeat_kv</code>。(<a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html?utm_source=chatgpt.com" title="torch.nn.functional.scaled_dot_product_attention">PyTorch</a>)</p>
+</blockquote>
+<h3 id="gqa-的-kv-对齐repeatexpand">2.2 GQA 的 K/V 对齐（repeat/expand）</h3>
+<p>本卡只有 <strong>2</strong> 个 KV 组，但要服务 <strong>8</strong> 个 Q 头 ⇒ 在<strong>头维</strong>做逻辑重复/广播： <code>[B, 2, S, 128] → [B, 8, S, 128]</code>（每个 KV 组服务 4 个 Q 头）。主流实现直接在 head 维做 <code>repeat_kv</code>。(<a target="_blank" rel="noopener" href="https://huggingface.co/docs/transformers/en/model_doc/qwen2?utm_source=chatgpt.com" title="Qwen2">Hugging Face</a>)</p>
+<h3 id="scaled-dot-product-attention每卡只算自己的-8-个头">2.3 Scaled Dot-Product Attention（每卡只算自己的 8 个头）</h3>
+<ul>
+<li><code>scores = (Q @ K^T) / sqrt(128)</code> → <code>softmax(scores) @ V</code></li>
+<li>得到上下文 <code>ctx_local: [B, 8, S, 128]</code> → 拼接为 <code>[B,S,1024]</code></li>
+<li>这一步可以由 PyTorch SDPA 或闪存注意力内核高效完成。(<a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html?utm_source=chatgpt.com" title="torch.nn.functional.scaled_dot_product_attention">PyTorch</a>)</li>
+</ul>
+<h3 id="输出投影行并行-1-次-all-reduce">2.4 输出投影（行并行 + 1 次 all-reduce）</h3>
+<ul>
+<li>每卡把 <code>[B,S,1024]</code> 乘以本卡的输出权重分片，得到 <code>Y_local: [B,S,4096]</code> 的<strong>部分和</strong>；</li>
+<li>跨卡做 <strong>all-reduce(sum)</strong> 得到最终 <code>Y: [B,S,4096]</code>。 Megatron 论文指出：<strong>自注意力本体不需通信</strong>，只在输出投影处做一次规约即可。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</li>
+</ul>
+<hr />
+<h2 id="列并行-行并行的数学等价为何切了再拼求和仍等价单卡">3. 列并行 / 行并行的<strong>数学等价</strong>（为何“切了再拼/求和”仍等价单卡）</h2>
+<p>把 <code>[B,S,·]</code> 展平为矩阵 <span class="math inline">\(X\in\mathbb{R}^{N\times(HD)}\)</span>（<span class="math inline">\(N=B\cdot S\)</span>），输出隐藏记为 <span class="math inline">\(H\)</span>。</p>
+<h3 id="列并行column-parallel-linear-拼接">3.1 列并行（Column-Parallel Linear）≡ <strong>拼接</strong></h3>
+<p>设 Q 的全量权重 <span class="math inline">\(W_Q\in\mathbb{R}^{(HD)\times(HD)}\)</span>，沿<strong>列</strong>切成 <span class="math inline">\(p\)</span> 块：</p>
+<p><span class="math display">\[
+W_Q=\big[W_Q^{(0)}\;\;W_Q^{(1)}\;\;\cdots\;\;W_Q^{(p-1)}\big],
+\quad W_Q^{(i)}\in\mathbb{R}^{(HD)\times(H/p\cdot D)}.
+\]</span></p>
+<p>则</p>
+<p><span class="math display">\[
+Q=XW_Q=\big[XW_Q^{(0)}\;\;XW_Q^{(1)}\;\;\cdots\;\;XW_Q^{(p-1)}\big]
+      =\operatorname{Concat}(Q^{(0)},\dots,Q^{(p-1)}).
+\]</span></p>
+<p><strong>每卡独立计算自己的 <span class="math inline">\(Q^{(i)}\)</span></strong>，无须通信。K/V 同理。这就是 Column-Parallel 的精确定义。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>, <a target="_blank" rel="noopener" href="https://docs.nvidia.com/megatron-core/developer-guide/latest/api-guide/tensor_parallel.html?utm_source=chatgpt.com" title="tensor_parallel package">NVIDIA Docs</a>)</p>
+<h3 id="每头独立-按头切给各卡仍然正确">3.2 每头独立 ⇒ <strong>按头切给各卡</strong>仍然正确</h3>
+<p>单头/单组注意力：</p>
+<p><span class="math display">\[
+Y_h=\operatorname{softmax}\!\Big(\tfrac{Q_hK_{g(h)}^\top}{\sqrt{D}}\Big)V_{g(h)}.
+\]</span></p>
+<p>GQA 下 <span class="math inline">\(g(h)\)</span> 把多个 Q 头映射到同一 KV 组；由于<strong>头间互不相干</strong>，把 32 个头平均分成 4 份到 4 张卡，各卡只依赖自己的 KV 组，就与单卡一致。<code>repeat_kv</code> 正是沿 head 维把 KV 对齐到 Q 头数。(<a target="_blank" rel="noopener" href="https://huggingface.co/docs/transformers/en/model_doc/qwen2?utm_source=chatgpt.com" title="Qwen2">Hugging Face</a>)</p>
+<h3 id="行并行row-parallel-linear-求和all-reduce">3.3 行并行（Row-Parallel Linear）≡ <strong>求和（all-reduce）</strong></h3>
+<p>把注意力输出的拼接张量 <span class="math inline">\(C\in\mathbb{R}^{N\times(HD)}\)</span> 按<strong>列</strong>（特征）切块：</p>
+<p><span class="math display">\[
+C=\big[C^{(0)}\;\;C^{(1)}\;\;\cdots\;\;C^{(p-1)}\big],\quad
+C^{(i)}\in\mathbb{R}^{N\times(H/p\cdot D)}.
+\]</span></p>
+<p>输出权重 <span class="math inline">\(W_O\in\mathbb{R}^{(HD)\times H}\)</span> 按<strong>行</strong>切块：</p>
+<p><span class="math display">\[
+W_O=\begin{bmatrix}
+W_O^{(0)}\\ W_O^{(1)}\\ \vdots\\ W_O^{(p-1)}
+\end{bmatrix},
+\quad W_O^{(i)}\in\mathbb{R}^{(H/p\cdot D)\times H}.
+\]</span></p>
+<p>块乘法恒等式：</p>
+<p><span class="math display">\[
+C\,W_O=\sum_{i=0}^{p-1} C^{(i)}W_O^{(i)}.
+\]</span></p>
+<p>因此各卡计算 <span class="math inline">\(Y^{(i)}=C^{(i)}W_O^{(i)}\)</span>，再 <strong>all-reduce(sum)</strong>，就得到与单卡完全相同的 <span class="math inline">\(Y\)</span>。这正是 Row-Parallel 的本质。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</p>
+<hr />
+<h2 id="为什么-gqa-会让-kv_projection_size-变小kv-cache-变省">4. 为什么 GQA 会让 <code>kv_projection_size</code> 变小、KV cache 变省？</h2>
+<ul>
+<li><strong>K/V 线性层</strong>只为 <code>num_query_groups</code> 产出通道：从 4096（=32×128）降为 1024（=8×128），K/V 投影的 <strong>参数量与 FLOPs</strong> 约为原来的 <strong>1/4</strong>；</li>
+<li>推理阶段的 <strong>KV cache</strong> 以「KV 头 × 序列 × 头维」计量，<strong>KV 头从 32 变 8</strong>，缓存与相关带宽均相应下降。HF 文档明确以 <code>num_key_value_heads</code> 描述该行为。(<a target="_blank" rel="noopener" href="https://huggingface.co/docs/transformers/en/model_doc/qwen2?utm_source=chatgpt.com" title="Qwen2">Hugging Face</a>)</li>
+</ul>
+<hr />
+<h2 id="形状速查以本例为准">5. 形状速查（以本例为准）</h2>
+<table>
+<thead>
+<tr class="header">
+<th>张量/步骤</th>
+<th style="text-align: right;">全局（不分片）</th>
+<th style="text-align: right;">每卡（TP=4）</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Q 线性输出维</td>
+<td style="text-align: right;">4096</td>
+<td style="text-align: right;"><strong>1024</strong></td>
+<td>Column-Parallel，无通信</td>
+</tr>
+<tr class="even">
+<td>K 线性输出维</td>
+<td style="text-align: right;">1024</td>
+<td style="text-align: right;"><strong>256</strong></td>
+<td>GQA：只出 8 个 KV 组</td>
+</tr>
+<tr class="odd">
+<td>V 线性输出维</td>
+<td style="text-align: right;">1024</td>
+<td style="text-align: right;"><strong>256</strong></td>
+<td>同上</td>
+</tr>
+<tr class="even">
+<td>Q 头数</td>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;"><strong>8</strong></td>
+<td>本卡只算自己 8 个头</td>
+</tr>
+<tr class="odd">
+<td>KV 组数</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;"><strong>2</strong></td>
+<td>每组服务 4 个 Q 头</td>
+</tr>
+<tr class="even">
+<td>头维 <span class="math inline">\(D\)</span></td>
+<td style="text-align: right;">128</td>
+<td style="text-align: right;">128</td>
+<td>用于 <span class="math inline">\(1/\sqrt{D}\)</span></td>
+</tr>
+<tr class="odd">
+<td>本卡注意力输出（拼头后）</td>
+<td style="text-align: right;">–</td>
+<td style="text-align: right;"><strong>[B,S,1024]</strong></td>
+<td>进入输出投影</td>
+</tr>
+<tr class="even">
+<td>最终输出（all-reduce 后）</td>
+<td style="text-align: right;"><strong>[B,S,4096]</strong></td>
+<td style="text-align: right;"><strong>[B,S,4096]</strong></td>
+<td>Row-Parallel + <code>sum</code></td>
+</tr>
+</tbody>
+</table>
+<p>（若启用 Sequence Parallel，只会沿 <code>S</code> 再切一维，不影响上述头/通道维逻辑。列/行并行与一次通信的结构是 Megatron-LM 的“经典拆分”。）(<a target="_blank" rel="noopener" href="https://awsdocs-neuron.readthedocs-hosted.com/en/latest/libraries/nxd-training/app_notes/nxd-training-tp-appnote.html?utm_source=chatgpt.com" title="Tensor Parallelism Overview — AWS Neuron Documentation">awsdocs-neuron.readthedocs-hosted.com</a>, <a target="_blank" rel="noopener" href="https://insujang.github.io/2024-01-11/tensor-parallelism-and-sequence-parallelism-detailed-analysis/?utm_source=chatgpt.com" title="Tensor Parallelism and Sequence Parallelism: Detailed Analysis">Better Tomorrow with Computer Science</a>)</p>
+<hr />
+<h2 id="mermaid一张维度并行方式小图">6. Mermaid：一张“维度/并行方式”小图</h2>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">%%&#123;init: &#123; &quot;flowchart&quot;: &#123; &quot;htmlLabels&quot;: true, &quot;wrap&quot;: true &#125; &#125;&#125;%%</span><br><span class="line">flowchart TB</span><br><span class="line">  X[&quot;Input X: [B,S,4096]&quot;] --&gt; QKV[&quot;Column-Parallel Q/K/V&lt;br/&gt;Q:[B,S,1024]  K/V:[B,S,256]&quot;]</span><br><span class="line">  QKV --&gt; Reshape[&quot;Reshape by heads&lt;br/&gt;Q:[B,8,S,128]&lt;br/&gt;K/V:[B,2,S,128]&quot;]</span><br><span class="line">  Reshape --&gt; RepeatKV[&quot;repeat_kv on head dim&lt;br/&gt;K/V:[B,8,S,128]&quot;]</span><br><span class="line">  RepeatKV --&gt; SDPA[&quot;SDPA per head&lt;br/&gt;ctx_local:[B,8,S,128]&lt;br/&gt;concat-&gt;[B,S,1024]&quot;]</span><br><span class="line">  SDPA --&gt; OutProj[&quot;Row-Parallel OutProj&lt;br/&gt;Y_local:[B,S,4096]&quot;]</span><br><span class="line">  OutProj --&gt; AllReduce[&quot;all-reduce(sum)&quot;]</span><br><span class="line">  AllReduce --&gt; Y[&quot;Final Y: [B,S,4096]&quot;]</span><br></pre></td></tr></table></figure>
+<hr />
+<h2 id="极简伪码pytorch-风格">7. 极简伪码（PyTorch 风格）</h2>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 列并行的线性：每卡拿到 Q/K/V 的一段输出列</span></span><br><span class="line">Q_local = linear_col_parallel_Q(X)   <span class="comment"># [B,S,1024] -&gt; view [B,8,S,128]</span></span><br><span class="line">K_local = linear_col_parallel_K(X)   <span class="comment"># [B,S,256]  -&gt; view [B,2,S,128]</span></span><br><span class="line">V_local = linear_col_parallel_V(X)   <span class="comment"># [B,S,256]  -&gt; view [B,2,S,128]</span></span><br><span class="line"></span><br><span class="line">Q = Q_local.view(B, S, <span class="number">8</span>, <span class="number">128</span>).transpose(<span class="number">1</span>, <span class="number">2</span>)  <span class="comment"># [B,8,S,128]</span></span><br><span class="line">K = K_local.view(B, S, <span class="number">2</span>, <span class="number">128</span>).transpose(<span class="number">1</span>, <span class="number">2</span>)  <span class="comment"># [B,2,S,128]</span></span><br><span class="line">V = V_local.view(B, S, <span class="number">2</span>, <span class="number">128</span>).transpose(<span class="number">1</span>, <span class="number">2</span>)  <span class="comment"># [B,2,S,128]</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># GQA: 让 2 个 KV 组匹配 8 个 Q 头（逻辑 repeat/expand）</span></span><br><span class="line">K = repeat_kv(K, n_rep=<span class="number">4</span>)   <span class="comment"># [B,8,S,128]</span></span><br><span class="line">V = repeat_kv(V, n_rep=<span class="number">4</span>)   <span class="comment"># [B,8,S,128]</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># SDPA（每卡只算自己的 8 个头）</span></span><br><span class="line">ctx = torch.nn.functional.scaled_dot_product_attention(Q, K, V)  <span class="comment"># [B,8,S,128]</span></span><br><span class="line">ctx = ctx.transpose(<span class="number">1</span>, <span class="number">2</span>).reshape(B, S, <span class="number">1024</span>)                    <span class="comment"># [B,S,1024]</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 行并行输出 + 一次 all-reduce(sum)</span></span><br><span class="line">Y_local = linear_row_parallel_out(ctx)   <span class="comment"># partial: [B,S,4096]</span></span><br><span class="line">Y = all_reduce_sum(Y_local)              <span class="comment"># final:   [B,S,4096]</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>SDPA 的接口与语义见 PyTorch 文档；<code>repeat_kv</code> 的语义与 GQA 的配置在 HF 文档/实现中有明确定义。(<a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html?utm_source=chatgpt.com" title="torch.nn.functional.scaled_dot_product_attention">PyTorch</a>, <a target="_blank" rel="noopener" href="https://huggingface.co/docs/transformers/en/model_doc/qwen2?utm_source=chatgpt.com" title="Qwen2">Hugging Face</a>)</p>
+</blockquote>
+<hr />
+<h2 id="正确性-checklist实践中最常见的坑">8. 正确性 Checklist（实践中最常见的坑）</h2>
+<ul>
+<li>整除关系： <code>num_attention_heads % TP == 0</code>，<code>num_query_groups % TP == 0</code>，且 <code>num_attention_heads % num_query_groups == 0</code>（GQA）。(<a target="_blank" rel="noopener" href="https://huggingface.co/docs/transformers/en/model_doc/qwen2?utm_source=chatgpt.com" title="Qwen2">Hugging Face</a>)</li>
+<li>显式 head 维：形状应为 <code>[B,H,S,D]</code> 或展平为 <code>[B·H,S,D]</code>，以契合 SDPA/FlashAttention 与 <code>repeat_kv</code>。(<a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html?utm_source=chatgpt.com" title="torch.nn.functional.scaled_dot_product_attention">PyTorch</a>)</li>
+<li>通信位置：自注意力本体无跨卡通信；<strong>仅</strong>输出投影需要一次 all-reduce。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</li>
+</ul>
+<hr />
+<h2 id="参考与延伸阅读">参考与延伸阅读</h2>
+<ul>
+<li><strong>Megatron-LM 论文</strong>：提出层内（张量）并行，注意力用列并行，输出用行并行，前向仅一处通信。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>, <a target="_blank" rel="noopener" href="https://ar5iv.labs.arxiv.org/html/1909.08053?utm_source=chatgpt.com" title="Training Multi-Billion Parameter Language Models Using ...">ar5iv</a>)</li>
+<li><strong>Megatron-Core 文档</strong>：Tensor Parallel API/用户指南（NVIDIA 官方）。(<a target="_blank" rel="noopener" href="https://docs.nvidia.com/megatron-core/developer-guide/latest/api-guide/tensor_parallel.html?utm_source=chatgpt.com" title="tensor_parallel package">NVIDIA Docs</a>)</li>
+<li><strong>PyTorch SDPA 文档/教程</strong>：官方的缩放点积注意力接口与高性能实现。(<a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html?utm_source=chatgpt.com" title="torch.nn.functional.scaled_dot_product_attention">PyTorch</a>, <a target="_blank" rel="noopener" href="https://docs.pytorch.org/tutorials/intermediate/scaled_dot_product_attention_tutorial.html?utm_source=chatgpt.com" title="(Beta) Implementing High-Performance Transformers with ...">PyTorch Docs</a>)</li>
+<li><strong>HF 文档（Llama/Qwen 系列）</strong>：<code>num_key_value_heads</code> 的定义、GQA/MQA/MHA 的关系；实现里 <code>repeat_kv</code> 的用法。(<a target="_blank" rel="noopener" href="https://huggingface.co/docs/transformers/en/model_doc/llama?utm_source=chatgpt.com" title="Llama">Hugging Face</a>)</li>
+<li><strong>列并行/行并行可视化讲解</strong>：对 ColumnParallelLinear / RowParallelLinear 的直观图解。(<a target="_blank" rel="noopener" href="https://awsdocs-neuron.readthedocs-hosted.com/en/latest/libraries/nxd-training/app_notes/nxd-training-tp-appnote.html?utm_source=chatgpt.com" title="Tensor Parallelism Overview — AWS Neuron Documentation">awsdocs-neuron.readthedocs-hosted.com</a>, <a target="_blank" rel="noopener" href="https://insujang.github.io/2024-01-11/tensor-parallelism-and-sequence-parallelism-detailed-analysis/?utm_source=chatgpt.com" title="Tensor Parallelism and Sequence Parallelism: Detailed Analysis">Better Tomorrow with Computer Science</a>)</li>
+</ul>
+<hr />
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/attention/" rel="tag"># attention</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2025/06/20/distribute/shard/" rel="prev" title="pytorch Shard">
+      <i class="fa fa-chevron-left"></i> pytorch Shard
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2025/08/17/paper/lumos/" rel="next" title="lumos:Efficient Performance Modeling and Estimation for Large-scale LLM Training">
+      lumos:Efficient Performance Modeling and Estimation for Large-scale LLM Training <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
 
 
 

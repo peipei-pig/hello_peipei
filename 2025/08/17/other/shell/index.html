@@ -198,9 +198,164 @@
           <div class="content post posts-expand">
             
 
+    
   
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="https://yaopepe.com/2025/08/17/other/shell/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="PePe">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="果冻甜甜的">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          ubuntu常见shell命令
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2025-08-17 19:25:37" itemprop="dateCreated datePublished" datetime="2025-08-17T19:25:37+08:00">2025-08-17</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2025-08-24 15:33:33" itemprop="dateModified" datetime="2025-08-24T15:33:33+08:00">2025-08-24</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/other/" itemprop="url" rel="index"><span itemprop="name">other</span></a>
+                </span>
+            </span>
+
+          
+
+<span class="post-meta-item">
+  <span class="post-meta-item-icon"><i class="fa fa-eye"></i></span>
+  <span class="post-meta-item-text">Views:</span>
+  <span id="vercount_value_page_pv">0</span>  
+</span>
 
 
+            <div class="post-description">这是文章的摘要部分。</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <span id="more"></span>
+<hr />
+<h2 id="磁盘占用与排序dusort">1. 磁盘占用与排序（du/sort）</h2>
+<h3 id="常用写法">常用写法</h3>
+<h2 id="section"><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 按“当前目录的直接子项”汇总（人类可读），并按大小倒序</span></span><br><span class="line"><span class="built_in">du</span> -h --max-depth=1 . | <span class="built_in">sort</span> -hr</span><br><span class="line"></span><br><span class="line"><span class="comment"># 仅统计每个条目总大小（不显示子层级），并对条目排序</span></span><br><span class="line"><span class="built_in">du</span> -sh -- * | <span class="built_in">sort</span> -h</span><br></pre></td></tr></table></figure></h2>
+<h2 id="文本搜索grep">2. 文本搜索（grep）</h2>
+<h3 id="基础">基础</h3>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">grep <span class="string">&quot;keyword&quot;</span> file.txt          <span class="comment"># 在单个文件中查找</span></span><br><span class="line">grep -n <span class="string">&quot;keyword&quot;</span> file.txt       <span class="comment"># 显示行号</span></span><br><span class="line">grep -i <span class="string">&quot;keyword&quot;</span> file.txt       <span class="comment"># 忽略大小写</span></span><br></pre></td></tr></table></figure>
+<h3 id="目录递归与上下文">目录递归与上下文</h3>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">grep -rin --color=auto <span class="string">&quot;keyword&quot;</span> .      <span class="comment"># 递归、忽略大小写、行号、高亮</span></span><br><span class="line">grep -nC 3 <span class="string">&quot;keyword&quot;</span> file.txt           <span class="comment"># 上下各 3 行</span></span><br><span class="line">grep -nA 2 <span class="string">&quot;keyword&quot;</span> file.txt           <span class="comment"># 后 2 行</span></span><br><span class="line">grep -nB 2 <span class="string">&quot;keyword&quot;</span> file.txt           <span class="comment"># 前 2 行</span></span><br></pre></td></tr></table></figure>
+<h3 id="精确匹配与正则">精确匹配与正则</h3>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">grep -rw <span class="string">&quot;\&lt;token\&gt;&quot;</span> .                  <span class="comment"># 按“整词”匹配</span></span><br><span class="line">grep -E <span class="string">&quot;err(or)?|fail(ed)?&quot;</span> app.log    <span class="comment"># 扩展正则</span></span><br><span class="line">grep -rF <span class="string">&quot;literal*text&quot;</span> .               <span class="comment"># 纯字符串（不当正则），更快</span></span><br></pre></td></tr></table></figure>
+<h3 id="排除文件目录">排除文件/目录</h3>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">grep -rin <span class="string">&quot;keyword&quot;</span> . \</span><br><span class="line">  --exclude-dir=&#123;.git,node_modules,dist&#125; \</span><br><span class="line">  --exclude=<span class="string">&quot;*.min.js&quot;</span></span><br></pre></td></tr></table></figure>
+<hr />
+<h2 id="文件路径查找findlocate">3. 文件路径查找（find/locate）</h2>
+<h3 id="find灵活但实时扫描慢">find：灵活但实时扫描（慢）</h3>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 按文件名（大小写不敏感）</span></span><br><span class="line">find /path -<span class="built_in">type</span> f -iname <span class="string">&quot;*name*&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 限制搜索深度</span></span><br><span class="line">find . -maxdepth 2 -<span class="built_in">type</span> d -name <span class="string">&quot;build&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 查找大文件（&gt; 100MB）并按大小降序列出前 20 个</span></span><br><span class="line">find /var -<span class="built_in">type</span> f -size +100M -<span class="built_in">printf</span> <span class="string">&#x27;%s\t%p\n&#x27;</span> | <span class="built_in">sort</span> -nr | <span class="built_in">head</span> -20</span><br><span class="line"></span><br><span class="line"><span class="comment"># 查找最近 1 天内修改的文件</span></span><br><span class="line">find . -<span class="built_in">type</span> f -mtime -1</span><br><span class="line"></span><br><span class="line"><span class="comment"># 对结果执行命令（安全处理空格）</span></span><br><span class="line">find . -<span class="built_in">type</span> f -name <span class="string">&quot;*.log&quot;</span> -print0 | xargs -0 gzip</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p><strong>跳过系统目录且压制报错</strong></p>
+</blockquote>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">find / \( -path /proc -o -path /sys -o -path /run \) -prune -o \</span><br><span class="line">  -<span class="built_in">type</span> f -name <span class="string">&quot;*.conf&quot;</span> -<span class="built_in">print</span> 2&gt;/dev/null</span><br></pre></td></tr></table></figure>
+<h3 id="locateplocate基于索引快">locate/plocate：基于索引（快）</h3>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sudo</span> apt-get install -y plocate</span><br><span class="line"><span class="built_in">sudo</span> updatedb                 <span class="comment"># 通常自动定时更新</span></span><br><span class="line">locate filename_or_pattern</span><br></pre></td></tr></table></figure>
+<hr />
+<h2 id="常见网络工具安装包">4. 常见网络工具安装包</h2>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ping</span></span><br><span class="line"><span class="built_in">sudo</span> apt-get install -y iputils-ping</span><br><span class="line"></span><br><span class="line"><span class="comment"># ifconfig（老工具，仍常见）</span></span><br><span class="line"><span class="built_in">sudo</span> apt-get install -y net-tools</span><br><span class="line"><span class="comment"># 现代替代：ip（通常已自带于 iproute2）</span></span><br><span class="line">ip addr</span><br><span class="line">ip <span class="built_in">link</span></span><br><span class="line">ip route</span><br><span class="line"></span><br><span class="line"><span class="comment"># killall</span></span><br><span class="line"><span class="built_in">sudo</span> apt-get install -y psmisc</span><br></pre></td></tr></table></figure>
+<hr />
+<h2 id="进程查杀killpkillkillall">5. 进程查杀（kill/pkill/killall）</h2>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ps -ef | grep python3 | awk <span class="string">&#x27;&#123;print $2&#125;&#x27;</span> | xargs <span class="built_in">kill</span> -9</span><br></pre></td></tr></table></figure>
+<h3 id="更安全的做法">更安全的做法</h3>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 优雅终止（SIGTERM）；无 PID 时不执行 (-r)</span></span><br><span class="line">pgrep -f python3 | xargs -r <span class="built_in">kill</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 直接按名称匹配（优雅终止），必要时再 -9</span></span><br><span class="line">pkill -f python3</span><br><span class="line">pkill -9 -f python3</span><br><span class="line"></span><br><span class="line"><span class="comment"># 避免匹配到 grep 自身</span></span><br><span class="line">ps -ef | grep <span class="string">&#x27;[p]ython3&#x27;</span> | awk <span class="string">&#x27;&#123;print $2&#125;&#x27;</span> | xargs -r <span class="built_in">kill</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>建议先尝试 <code>SIGTERM</code>（默认），无响应再用 <code>SIGKILL</code>（<code>-9</code>）。</p>
+</blockquote>
+<hr />
+<h2 id="高频命令清单与示例">6. 高频命令清单与示例</h2>
+<h3 id="系统资源">系统/资源</h3>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">top                     <span class="comment"># 实时概览</span></span><br><span class="line">htop                    <span class="comment"># 更友好（需：sudo apt-get install -y htop）</span></span><br><span class="line">free -h                 <span class="comment"># 内存</span></span><br><span class="line"><span class="built_in">df</span> -h                   <span class="comment"># 磁盘分区容量</span></span><br><span class="line"><span class="built_in">du</span> -sh * | <span class="built_in">sort</span> -h      <span class="comment"># 目录占用</span></span><br><span class="line"><span class="built_in">uname</span> -a                <span class="comment"># 内核信息</span></span><br><span class="line">lsb_release -a          <span class="comment"># 发行版信息</span></span><br></pre></td></tr></table></figure>
+<h3 id="进程网络">进程/网络</h3>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">ps aux | less</span><br><span class="line">pstree -p               <span class="comment"># 进程树（需：sudo apt-get install -y psmisc）</span></span><br><span class="line">lsof -i :8080           <span class="comment"># 端口占用（需：sudo apt-get install -y lsof）</span></span><br><span class="line">ss -lntp                <span class="comment"># 监听端口 + 进程</span></span><br></pre></td></tr></table></figure>
+<h3 id="文本日志">文本/日志</h3>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">less file.log</span><br><span class="line"><span class="built_in">tail</span> -f file.log</span><br><span class="line"><span class="built_in">wc</span> -l file.txt</span><br><span class="line"><span class="built_in">sort</span> file | <span class="built_in">uniq</span> -c | <span class="built_in">sort</span> -nr</span><br><span class="line"><span class="built_in">cut</span> -d<span class="string">&#x27;,&#x27;</span> -f1,3 file.csv</span><br><span class="line">sed -n <span class="string">&#x27;1,20p&#x27;</span> file.txt</span><br><span class="line">awk -F: <span class="string">&#x27;&#123;print $1,$3&#125;&#x27;</span> /etc/passwd</span><br></pre></td></tr></table></figure>
+<h3 id="文件归档传输">文件/归档/传输</h3>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">tar -czf logs.tgz logs/        <span class="comment"># 压缩</span></span><br><span class="line">tar -xzf logs.tgz              <span class="comment"># 解压</span></span><br><span class="line">zip -r src.zip src/            <span class="comment"># zip（需：sudo apt-get install -y zip unzip）</span></span><br><span class="line">rsync -av --progress src/ dst/</span><br><span class="line">scp file user@host:/path/</span><br></pre></td></tr></table></figure>
+<h3 id="权限链接">权限/链接</h3>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">chmod</span> +x run.sh</span><br><span class="line"><span class="built_in">chown</span> user:group file</span><br><span class="line"><span class="built_in">ln</span> -s /real/path link_name</span><br></pre></td></tr></table></figure>
+<h3 id="服务与日志systemd">服务与日志（systemd）</h3>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">systemctl status nginx</span><br><span class="line"><span class="built_in">sudo</span> systemctl start nginx</span><br><span class="line">journalctl -u nginx --since <span class="string">&quot;1 hour ago&quot;</span></span><br></pre></td></tr></table></figure>
+<h3 id="其他">其他</h3>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">which</span> python3</span><br><span class="line"><span class="built_in">command</span> -v node</span><br><span class="line"><span class="built_in">date</span> <span class="string">&quot;+%F %T&quot;</span></span><br><span class="line"><span class="built_in">nohup</span> python3 app.py &gt;out.log 2&gt;&amp;1 &amp;</span><br><span class="line">tmux new -s work              <span class="comment"># 终端复用（需：sudo apt-get install -y tmux）</span></span><br></pre></td></tr></table></figure>
+<hr />
+<h2 id="小贴士与常见坑">7. 小贴士与常见坑</h2>
+<ul>
+<li><strong>隐藏文件</strong>：<code>*</code> 不匹配隐藏项，可用 <code>.* *</code> 组合或开启 <code>dotglob</code>。</li>
+<li><strong>防止参数被当作选项</strong>：当文件名以 <code>-</code> 开头时加 <code>--</code>，如 <code>rm -- -weirdfile</code>。</li>
+<li><strong>xargs 安全</strong>：二进制文件/空格用 <code>-0</code> 配合 <code>-print0</code>；无结果时不执行用 <code>-r</code>。</li>
+<li><strong>优雅停服务优先</strong>：<code>kill -TERM</code> → 不行再 <code>kill -KILL</code>。</li>
+<li><strong>权限</strong>：系统目录操作慎用 <code>sudo</code>，写前先 <code>ls</code>/<code>du</code>/<code>stat</code> 确认。</li>
+<li><strong>grep 正则 vs 字符串</strong>：纯文本匹配更稳更快用 <code>-F</code>。</li>
+<li><strong>find 性能</strong>：大目录用 <code>-maxdepth</code> 限制层级或改用 <code>locate/plocate</code>。</li>
+</ul>
+<hr />
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/shell/" rel="tag"># shell</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2025/08/17/paper/lumos/" rel="prev" title="lumos:Efficient Performance Modeling and Estimation for Large-scale LLM Training">
+      <i class="fa fa-chevron-left"></i> lumos:Efficient Performance Modeling and Estimation for Large-scale LLM Training
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
 
 
 
