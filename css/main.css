@@ -1196,7 +1196,7 @@ pre .javascript .function {
 }
 .links-of-author a::before,
 .links-of-author span.exturl::before {
-  background: #ff28aa;
+  background: #ffff2d;
   border-radius: 50%;
   content: ' ';
   display: inline-block;
@@ -2635,4 +2635,36 @@ hr {
 /* Mist / Muse 下常见：icon 会占固定宽度，强制归零 */
 .site-nav .menu-item-search .menu-item-icon {
   width: 0 !important;
+}
+/* 紧凑首页列表：压缩文章块的外边距与分隔 */
+.posts-expand .post-block,
+.posts-expand .post {
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+}
+.posts-expand .post-header {
+  margin-bottom: 4px;
+}
+.posts-expand .post-title {
+  margin: 0;
+  line-height: 1.35;
+}
+.posts-expand .post-meta {
+  margin: 0 0 4px;
+}
+.posts-expand .post-body {
+  margin: 0;
+/* 摘要段落再压一点 */
+}
+.posts-expand .post-body p {
+  margin: 0;
+}
+.posts-expand .post-eof {
+  display: none;
+}
+.posts-expand hr {
+  margin: 8px 0;
+}
+.posts-expand .post-button {
+  margin-top: 6px;
 }
