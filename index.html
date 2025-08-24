@@ -310,7 +310,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2025-08-24 15:33:12" itemprop="dateModified" datetime="2025-08-24T15:33:12+08:00">2025-08-24</time>
+                <time title="Modified: 2025-08-24 15:59:50" itemprop="dateModified" datetime="2025-08-24T15:59:50+08:00">2025-08-24</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -335,135 +335,15 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <hr />
-<blockquote>
-<p><strong>一句话总结</strong>：<strong>Lumos</strong> 是一个<strong>基于运行时 trace 的建模/模拟工具</strong>，从 PyTorch Kineto 等采集到的事件中<strong>自动恢复精细的执行图</strong>（含算-通重叠与跨流依赖），并支持在不重新跑模型的情况下，对 <strong>DP/PP/模型结构</strong> 做 “what-if” 修改与<strong>快速估算</strong>；在 <strong>512×H100</strong> 集群上回放<strong>平均误差约 3.3%</strong>。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</p>
-</blockquote>
-<hr />
-<h2 id="核心贡献与定位">1. 核心贡献与定位</h2>
-<ul>
-<li><strong>精细执行图</strong>：仅用框架内置的 profiler（如 PyTorch Kineto）即可从 CPU/GPU 事件恢复<strong>四类关键依赖</strong>（CPU→GPU、GPU→CPU、同流顺序、<strong>跨流事件</strong>），精准表达算-通重叠与同步关系。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
-<li><strong>图编辑 &amp; 快速外推</strong>：在<strong>不改动模型/系统</strong>的前提下，从原始 trace-graph 出发，对 <strong>数据并行（DP）</strong>、<strong>流水并行（PP）</strong> 与<strong>模型层数/隐藏维度</strong>做图级改写，再用模拟器<strong>重放一整个迭代</strong>估算性能。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
-<li><strong>高精度回放</strong>：在生产集群 <strong>最多 512×H100</strong>、多种 GPT-3 变体、不同并行策略下，<strong>迭代时间回放平均误差 3.3%</strong>，并能再现实测的执行细分占比。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
-</ul>
-<hr />
-<h2 id="lumos-如何从-trace-构建执行图">2. Lumos 如何从 trace 构建执行图</h2>
-<ul>
-<li><strong>事件来源</strong>：直接使用 PyTorch/TensorFlow 的<strong>内置 profiler</strong>（如 Kineto），无需对模型或框架做侵入式改造。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
-<li><p><strong>依赖建模（四类）</strong>：</p>
-<ol type="1">
-<li><strong>CPU→GPU（launch）</strong>：用 <strong>correlation ID</strong> 绑定 CPU 端的 <code>cudaLaunchKernel</code>/<code>cudaMemsetAsync</code> 与对应的 GPU kernel。</li>
-<li><strong>GPU→CPU（同步）</strong>：<code>cudaDeviceSync</code>/<code>cudaStreamSync</code> 等需要等到相关 GPU kernel 完成。</li>
-<li><strong>同流顺序</strong>：同一 CUDA stream 内核严格顺序。</li>
-<li><strong>跨流事件</strong>：<code>cudaEventRecord</code> 与 <code>cudaStreamWaitEvent</code> 形成“记录→等待”的跨流依赖，表达<strong>不同流</strong>间的有序性。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
-</ol></li>
-</ul>
-<hr />
-<h2 id="图编辑支持哪些-what-if-改动">3. 图编辑：支持哪些 “what-if” 改动</h2>
-<ul>
-<li><strong>数据并行（DP）</strong>：只需<strong>调整通信任务</strong>（如梯度规约类）的执行时间；本地计算不变。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
-<li><p><strong>流水并行（PP）</strong>：</p>
-<ul>
-<li>先按所选调度（如 <strong>1F1B</strong>）更新各微批的前后向顺序；</li>
-<li>将原图中任务<strong>按层聚类</strong>后重分配到新 stage；</li>
-<li>在 stage 边界插入/重连<strong>激活与梯度</strong>的 send/recv；</li>
-<li>保留原 trace 中的<strong>依赖模式</strong>以保证可重放正确性。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
-</ul></li>
-<li><p><strong>模型结构</strong>：</p>
-<ul>
-<li><strong>隐藏维度</strong>变更：重写相关算子/内核的输入张量维度并<strong>重估时长</strong>；</li>
-<li><strong>层数</strong>变更：复制/删减层块并<strong>重连依赖与通信</strong>。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
-</ul></li>
-<li><p><strong>暂不支持</strong>：<strong>修改 Tensor Parallelism（TP）</strong>（通常受限于单机且通信重，留作未来工作）。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</p></li>
-</ul>
-<hr />
-<h2 id="模拟器事件驱动流程论文算法-1-的要点">4. 模拟器：事件驱动流程（论文算法 1 的要点）</h2>
-<ul>
-<li><p>维护两个集合：</p>
-<ul>
-<li><strong>固定依赖</strong>（初始化阶段一次性确定，如同线程/同流顺序、CPU→GPU 的 launch 边）；</li>
-<li><strong>运行期依赖</strong>（例如 <code>cudaStreamSync</code> 需要等待**该流上“最后一个 kernel”**完成，这个“最后”要在调度时才能确定）。</li>
-</ul></li>
-<li><p>主循环：从就绪集合取任务 → 分配到其“处理器”（CPU 线程/CUDA stream）上运行 → 更新处理器可用时间与后继任务的最早可启动时间；若仍有运行期依赖未满足则<strong>延后</strong>。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</p></li>
-</ul>
-<hr />
-<h2 id="评测设置与关键数字">5. 评测设置与关键数字</h2>
-<ul>
-<li><strong>规模与环境</strong>：<strong>最多 512×H100（32 台主机）</strong>，RoCE 数据中心网络（<strong>每主机 8×400Gbps</strong>），CUDA <strong>12.4</strong>，PyTorch <strong>2.5</strong>，Transformer Engine <strong>0.12.0</strong>，Lightning <strong>1.9.4</strong>。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
-<li><strong>对比基线</strong>：与 <strong>dPRO</strong>（trace-driven 回放系统）相比，Lumos 在复杂并行配置下能更好捕捉<strong>跨流依赖</strong>与算-通重叠，显著降低回放误差。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
-<li><strong>结果</strong>：回放<strong>平均误差 ~3.3%</strong>；并展示在 <strong>DP/PP/结构</strong>外推时的估算准确性与执行细分（暴露计算/暴露通信/重叠/其他）。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
-</ul>
-<hr />
-<h2 id="工程实现与使用门槛">6. 工程实现与使用门槛</h2>
-<ul>
-<li><strong>实现规模</strong>：约 <strong>5,200 行 Python</strong>。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
-<li><strong>接入成本</strong>：在训练代码里<strong>插入 ~10 行 profiler hook</strong> 采集 Kineto trace，随后走<strong>自动化</strong>流程：<strong>建图 → 图编辑 → 模拟估算</strong>。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
-</ul>
-<hr />
-<h2 id="适用不适用场景">7. 适用/不适用场景</h2>
-<ul>
-<li><p><strong>适用</strong>：</p>
-<ul>
-<li>需要在真实机群外<strong>快速比较</strong>并行/结构配置（DP/PP/层数/隐藏维）并估算收益；</li>
-<li>需要<strong>高保真回放</strong>来定位算-通重叠与跨流同步处的性能瓶颈。</li>
-</ul></li>
-<li><p><strong>当前不适用/注意</strong>：</p>
-<ul>
-<li><strong>修改 TP</strong> 的外推（论文暂未支持）；</li>
-<li>追求 FLOPs、内存、带宽、能耗等<strong>系统级指标</strong>（论文称为<strong>后续计划</strong>）；</li>
-<li>估算假设<strong>新配置可正常运行</strong>（不考虑 OOM 等失效情形）。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
-</ul></li>
-</ul>
-<hr />
-<h2 id="与既有工作的关系示例dpro">8. 与既有工作的关系（示例：dPRO）</h2>
-<ul>
-<li><strong>dPRO</strong> 同样是 trace-driven 的性能诊断/回放系统，但在复杂 LLM 并行下，<strong>跨流依赖</strong>与重叠的精细建模更困难，容易导致过度乐观的并行预测；Lumos 在这些方面做了系统增强并显著降低误差。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
-</ul>
-<hr />
-<h2 id="论文与会议信息可引用">9. 论文与会议信息（可引用）</h2>
-<ul>
-<li>论文（arXiv）：<strong>“Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training”</strong>（2025-04-12 首次提交）。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2504.09307?utm_source=chatgpt.com" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
-<li>PDF（作者主页镜像/MLSys 论文）：可下载全文。(<a target="_blank" rel="noopener" href="https://mingyu-liang.github.io/files/mlsys25-lumos.pdf?utm_source=chatgpt.com" title="Lumos: Efficient Performance Modeling and Estimation for ...">mingyu-liang.github.io</a>)</li>
-<li><strong>MLSys 2025</strong> 接收与日程页面（含报告/录播入口）。(<a target="_blank" rel="noopener" href="https://mlsys.org/virtual/2025/papers.html?utm_source=chatgpt.com" title="MLSys 2025 Papers">mlsys.org</a>)</li>
-</ul>
-<hr />
-<h2 id="代码与开源状态截至-2025-08-15">10. 代码与开源状态（截至 2025-08-15）</h2>
-<ul>
-<li><strong>未见官方代码库链接</strong>（arXiv/MLSys 页面与作者 PDF 中均未提供），社区里存在<strong>同名但无关</strong>的 “Lumos” 项目（如 Agent/视频生成/视觉等），注意区分。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2504.09307?utm_source=chatgpt.com" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>, <a target="_blank" rel="noopener" href="https://mlsys.org/virtual/2025/papers.html?utm_source=chatgpt.com" title="MLSys 2025 Papers">mlsys.org</a>, <a target="_blank" rel="noopener" href="https://github.com/allenai/lumos?utm_source=chatgpt.com" title="Code and data for &quot;Lumos: Learning Agents with Unified ...">GitHub</a>)</li>
-</ul>
-<hr />
-<h2 id="快速上手示意">11. 快速上手（示意）</h2>
-<blockquote>
-<p>采集 <strong>Kineto trace</strong> → 构建执行图 → 在图上编辑（DP/PP/结构）→ 模拟回放/估算。 论文正文给出了典型的 <strong>PyTorch profiler</strong> 用法示意与全流程示意图。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</p>
-</blockquote>
-<hr />
-<h2 id="你可能关心的细节精炼版">12. 你可能关心的细节（精炼版）</h2>
-<ul>
-<li><p><strong>为什么更准？</strong></p>
-<ul>
-<li>用 <strong>correlation ID</strong> 串起 CPU launch 与 GPU kernel；</li>
-<li>显式恢复 <strong>跨流事件</strong>（Record/Wait）与<strong>同步</strong>（Stream/Device Sync）；</li>
-<li>在模拟器中将依赖分为<strong>固定</strong>与<strong>运行期</strong>，确保像 “<strong>等待该流最后一个 kernel</strong>” 这类语义被正确表达。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
-</ul></li>
-<li><p><strong>改 DP/PP 怎么算？</strong></p>
-<ul>
-<li><strong>DP</strong>：只重赋通信任务时长；</li>
-<li><strong>PP</strong>：更新调度（如 1F1B）→ 任务按层分组并<strong>重分 stage</strong> → 在边界插入 send/recv → 保持依赖闭合。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
-</ul></li>
-</ul>
-<hr />
-<h3 id="参考文献-链接">参考文献 / 链接</h3>
-<ul>
-<li>Lumos 论文（arXiv 页面与 PDF）：(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2504.09307?utm_source=chatgpt.com" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</li>
-<li>Lumos（MLSys 2025 会议页面/日程/录播）：(<a target="_blank" rel="noopener" href="https://mlsys.org/virtual/2025/papers.html?utm_source=chatgpt.com" title="MLSys 2025 Papers">mlsys.org</a>)</li>
-<li>dPRO（trace-driven 回放基线论文）：(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2205.02473?utm_source=chatgpt.com" title="dPRO: A Generic Performance Diagnosis and Optimization ...">arXiv</a>)</li>
-</ul>
-<hr />
-<blockquote>
-<p>注：本文档只摘取对工程落地最关键的事实与方法，更多图例（如 <strong>PP×TP</strong> 微批调度示例）与完整算法细节请参阅原论文正文与附图。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2504.09307" title="Lumos: Efficient Performance Modeling and Estimation for Large-scale LLM Training">arXiv</a>)</p>
-</blockquote>
-<hr />
-
+          <p>lumos模拟器论文记录</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2025/08/17/paper/lumos/">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
       
     </div>
 
