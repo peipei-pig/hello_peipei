@@ -20,16 +20,17 @@
     var CONFIG = {"hostname":"yaopepe.com","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"post","display":"post","padding":18,"offset":12,"onmobile":false,"width_dual_column":240},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":true,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.json"};
   </script>
 
-  <meta name="description" content="1. _split_tensor分析 1.1 代码实现流程图（Mermaid） 1234567891011121314151617flowchart TD  A[&quot;输入：tensor, num_chunks, with_padding, contiguous&quot;] --&gt; B&#123;&quot;dim ≤ tensor.ndim?&quot;&#125;  B --">
+  <meta name="description" content="pytorch中Shard实现">
 <meta property="og:type" content="article">
 <meta property="og:title" content="pytorch Shard">
 <meta property="og:url" content="https://yaopepe.com/2025/06/20/distribute/shard/index.html">
 <meta property="og:site_name" content="果冻甜甜的">
-<meta property="og:description" content="1. _split_tensor分析 1.1 代码实现流程图（Mermaid） 1234567891011121314151617flowchart TD  A[&quot;输入：tensor, num_chunks, with_padding, contiguous&quot;] --&gt; B&#123;&quot;dim ≤ tensor.ndim?&quot;&#125;  B --">
+<meta property="og:description" content="pytorch中Shard实现">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2025-06-20T07:43:18.391Z">
-<meta property="article:modified_time" content="2025-08-24T07:38:03.776Z">
+<meta property="article:modified_time" content="2025-08-24T08:03:36.423Z">
 <meta property="article:author" content="PePe">
+<meta property="article:tag" content="shard">
 <meta name="twitter:card" content="summary">
 
 <link rel="canonical" href="https://yaopepe.com/2025/06/20/distribute/shard/">
@@ -231,8 +232,17 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2025-08-24 15:38:03" itemprop="dateModified" datetime="2025-08-24T15:38:03+08:00">2025-08-24</time>
+                <time title="Modified: 2025-08-24 16:03:36" itemprop="dateModified" datetime="2025-08-24T16:03:36+08:00">2025-08-24</time>
               </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/distribute/" itemprop="url" rel="index"><span itemprop="name">distribute</span></a>
+                </span>
+            </span>
 
           
 
@@ -243,6 +253,7 @@
 </span>
 
 
+            <div class="post-description">pytorch中Shard实现</div>
 
         </div>
       </header>
@@ -253,7 +264,8 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <hr />
+        <span id="more"></span>
+<hr />
 <h2 id="split_tensor分析">1. _split_tensor分析</h2>
 <h3 id="代码实现流程图mermaid">1.1 代码实现流程图（Mermaid）</h3>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">flowchart TD</span><br><span class="line">  A[&quot;输入：tensor, num_chunks, with_padding, contiguous&quot;] --&gt; B&#123;&quot;dim ≤ tensor.ndim?&quot;&#125;</span><br><span class="line">  B -- 否 --&gt; E[&quot;AssertionError 抛出&quot;]</span><br><span class="line">  B -- 是 --&gt; C[&quot;调用 torch.chunk 沿 dim 分块&quot;]</span><br><span class="line">  C --&gt; D[&quot;tensor_list, 计算 num_empty_tensors = num_chunks - len(tensor_list)&quot;]</span><br><span class="line">  D --&gt; F&#123;&quot;无需 padding 或 均匀可分?&quot;&#125;</span><br><span class="line">  F -- 是 --&gt; G[&quot;(可选) 对每块调用 .contiguous()&quot;]</span><br><span class="line">  G --&gt; H[&quot;调用 fill_empty_tensor_to_shards 补空 shard&quot;]</span><br><span class="line">  H --&gt; I[&quot;返回 shards 列表 和 空 pad_sizes []&quot;]</span><br><span class="line">  F -- 否 --&gt; J[&quot;计算 full_chunk_size = ceil(dim_size / num_chunks)&quot;]</span><br><span class="line">  J --&gt; K[&quot;收集原始 chunk_sizes&quot;]</span><br><span class="line">  K --&gt; L[&quot;pad_sizes = full_chunk_size - chunk_size&quot;]</span><br><span class="line">  L --&gt; M[&quot;调用 fill_empty_tensor_to_shards 补空 shard&quot;]</span><br><span class="line">  M --&gt; N[&quot;对每个 shard：若 pad_size &gt; 0，则 pad_tensor(shard, dim, pad_size)&quot;]</span><br><span class="line">  N --&gt; O[&quot;(可选) shard.contiguous()&quot;]</span><br><span class="line">  O --&gt; P[&quot;收集 shard_list 和 pad_sizes&quot;]</span><br><span class="line">  P --&gt; Q[&quot;返回 shard_list 和 pad_sizes&quot;]</span><br></pre></td></tr></table></figure>
@@ -295,6 +307,9 @@
     
 
       <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/shard/" rel="tag"># shard</a>
+          </div>
 
         
 
@@ -391,7 +406,7 @@
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
-        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-count">7</span>
         <span class="site-state-item-name">tags</span></a>
       </div>
   </nav>
