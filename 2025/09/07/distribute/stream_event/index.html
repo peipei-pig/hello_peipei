@@ -27,8 +27,8 @@
 <meta property="og:site_name" content="果冻甜甜的">
 <meta property="og:description" content="PyTorch 中的 Stream &#x2F; Event 与跨流同步：原理、用法与可运行示例">
 <meta property="og:locale" content="en_US">
-<meta property="article:published_time" content="2025-09-07T08:30:33.494Z">
-<meta property="article:modified_time" content="2025-09-07T08:30:33.494Z">
+<meta property="article:published_time" content="2025-09-07T08:31:55.678Z">
+<meta property="article:modified_time" content="2025-09-07T08:31:55.678Z">
 <meta property="article:author" content="PePe">
 <meta property="article:tag" content="attention">
 <meta name="twitter:card" content="summary">
@@ -232,7 +232,7 @@
               </span>
               <span class="post-meta-item-text">Posted on</span>
 
-              <time title="Created: 2025-09-07 16:30:33" itemprop="dateCreated datePublished" datetime="2025-09-07T16:30:33+08:00">2025-09-07</time>
+              <time title="Created: 2025-09-07 16:31:55" itemprop="dateCreated datePublished" datetime="2025-09-07T16:31:55+08:00">2025-09-07</time>
             </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -315,7 +315,7 @@
 <hr />
 <h2 id="cpugpu-拷贝与-non_blocking-pinned-memory">5. CPU↔GPU 拷贝与 <strong>non_blocking</strong> / <strong>pinned memory</strong></h2>
 <ul>
-<li>只有当**页锁定内存（pinned）**参与时，很多拷贝才能真正异步化并与计算重叠；PyTorch 教程对 <code>pin_memory()</code> 与 <code>non_blocking=True</code> 的行为做了系统说明。(<a target="_blank" rel="noopener" href="https://docs.pytorch.org/tutorials/intermediate/pinmem_nonblock.html" title="A guide on good usage of non_blocking and pin_memory() in PyTorch — PyTorch Tutorials 2.8.0+cu128 documentation">docs.pytorch.org</a>)</li>
+<li>只有当<strong>页锁定内存（pinned）</strong>参与时，很多拷贝才能真正异步化并与计算重叠；PyTorch 教程对 <code>pin_memory()</code> 与 <code>non_blocking=True</code> 的行为做了系统说明。(<a target="_blank" rel="noopener" href="https://docs.pytorch.org/tutorials/intermediate/pinmem_nonblock.html" title="A guide on good usage of non_blocking and pin_memory() in PyTorch — PyTorch Tutorials 2.8.0+cu128 documentation">docs.pytorch.org</a>)</li>
 <li>读取 D2H 结果前，应<strong>等待拷贝完成</strong>（事件或同步），不要直接在 CPU 端消费异步结果。(<a target="_blank" rel="noopener" href="https://docs.pytorch.org/tutorials/intermediate/pinmem_nonblock.html" title="A guide on good usage of non_blocking and pin_memory() in PyTorch — PyTorch Tutorials 2.8.0+cu128 documentation">docs.pytorch.org</a>)</li>
 </ul>
 <p><strong>推荐模式（D2H 拷贝不“卡住”整机，只在用到结果时小范围等待）</strong>：</p>
