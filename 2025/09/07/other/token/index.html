@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 7.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yaopepe.com","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"post","display":"post","padding":18,"offset":12,"onmobile":false,"width_dual_column":240},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":true,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.json"};
+  </script>
+
+  <meta name="description" content="介绍token的基础知识">
+<meta property="og:type" content="article">
+<meta property="og:title" content="token 简介">
+<meta property="og:url" content="https://yaopepe.com/2025/09/07/other/token/index.html">
+<meta property="og:site_name" content="果冻甜甜的">
+<meta property="og:description" content="介绍token的基础知识">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2025-09-07T08:28:31.106Z">
+<meta property="article:modified_time" content="2025-09-07T08:28:31.106Z">
+<meta property="article:author" content="PePe">
+<meta property="article:tag" content="shell">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://yaopepe.com/2025/09/07/other/token/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+
+  <title>token 简介 | 果冻甜甜的</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">果冻甜甜的</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-首页">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-分类">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-标签">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-归档">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-关于">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+<div class="site-meta-counts" style="font-size:.9em;opacity:.85;margin-top:.25rem;display:flex;gap:.75rem;flex-wrap:wrap">
+  <span class="post-meta-item">
+    <i class="fa fa-eye"></i>
+    <span class="post-meta-item-text">总访问量</span>
+    <span id="vercount_value_site_pv">0</span>
+  </span>
+
+  <span class="post-meta-item">
+    <i class="fa fa-file"></i>
+    <span class="post-meta-item-text">总文章数</span>
+    <span id="total_posts_count">10</span>
+  </span>
+</div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="https://yaopepe.com/2025/09/07/other/token/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="PePe">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="果冻甜甜的">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          token 简介
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2025-09-07 16:28:31" itemprop="dateCreated datePublished" datetime="2025-09-07T16:28:31+08:00">2025-09-07</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%85%B6%E5%AE%83/" itemprop="url" rel="index"><span itemprop="name">其它</span></a>
+                </span>
+            </span>
+
+          
+
+<span class="post-meta-item">
+  <span class="post-meta-item-icon"><i class="fa fa-eye"></i></span>
+  <span class="post-meta-item-text">Views:</span>
+  <span id="vercount_value_page_pv">0</span>  
+</span>
+
+
+            <div class="post-description">介绍token的基础知识</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <span id="more"></span>
+<hr />
+<h1 id="什么是-token">🧠 什么是 Token？</h1>
+<p>在自然语言处理中，<strong>Token</strong> 是文本的基本单位。它可以是一个字符、一个词、一个子词，甚至是一个标点符号。Token 的定义取决于所采用的标记化（tokenization）方法。</p>
+<hr />
+<h1 id="文本如何转换为数字">🔄 文本如何转换为数字？</h1>
+<p>在训练语言模型时，文本需要被转换为数字形式。这一过程通常包括以下步骤：</p>
+<ol type="1">
+<li><strong>标记化（Tokenization）</strong>：将文本分解为 tokens。</li>
+<li><strong>构建词汇表（Vocabulary）</strong>：为每个 token 分配一个唯一的数字 ID。</li>
+<li><strong>数字化（Numericalization）</strong>：将文本中的 tokens 替换为对应的数字 ID。</li>
+</ol>
+<p>例如，句子 <code>"hello world"</code> 可能被标记化为 <code>["hello", "world"]</code>，然后根据词汇表转换为 <code>[1, 2]</code>。</p>
+<hr />
+<h1 id="常见的标记化方法">🔤 常见的标记化方法</h1>
+<h2 id="word-based-tokenization基于词的标记化">1. Word-based Tokenization（基于词的标记化）</h2>
+<p>将文本按空格或标点符号分割成单词。这种方法简单直观，但存在以下问题：</p>
+<ul>
+<li><strong>词汇表过大</strong>：需要为每个单词分配一个唯一的 ID，导致词汇表庞大。</li>
+<li><strong>处理未登录词困难</strong>：对于训练数据中未出现的单词，模型难以处理。</li>
+</ul>
+<p><strong>示例</strong>：</p>
+<ul>
+<li>输入文本：<code>"I love NLP"</code></li>
+<li>标记化结果：<code>["I", "love", "NLP"]</code></li>
+<li>数字化表示：<code>[1, 2, 3]</code></li>
+</ul>
+<h2 id="character-based-tokenization基于字符的标记化">2. Character-based Tokenization（基于字符的标记化）</h2>
+<p>将文本分解为单个字符。这种方法可以有效减少词汇表大小，但可能导致以下问题：</p>
+<ul>
+<li><strong>信息丢失</strong>：字符级别的表示可能无法捕捉到词汇的完整语义。</li>
+<li><strong>序列长度增加</strong>：同一文本的 token 数量增加，可能影响模型的处理效率。</li>
+</ul>
+<p><strong>示例</strong>：</p>
+<ul>
+<li>输入文本：<code>"I love NLP"</code></li>
+<li>标记化结果：<code>["I", " ", "l", "o", "v", "e", " ", "N", "L", "P"]</code></li>
+<li>数字化表示：<code>[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]</code></li>
+</ul>
+<hr />
+<h1 id="subword-based-tokenizationbpe字节对编码">🔬 Subword-based Tokenization：BPE（字节对编码）</h1>
+<p><strong>BPE</strong> 是一种子词级别的标记化方法，旨在平衡词汇表大小和语义表达能力。它通过迭代地合并最频繁的字符对来构建子词单元，并被广泛应用于 GPT、BERT 等大语言模型。BPE 的过程可以概括为以下五个阶段：</p>
+<h2 id="初始化词汇表">1. 初始化词汇表</h2>
+<ul>
+<li><strong>拆分字符</strong>：首先将语料库拆分为最小单位——单个字符。例如，对单词 <code>lower</code> 拆分得到 <code>l o w e r&lt;/w&gt;</code>，并在每个词尾添加特殊结束符（如 <code>&lt;/w&gt;</code>），以区分不同词。</li>
+<li><strong>构建初始词表</strong>：记录所有出现过的字符，作为初始 token 集。</li>
+</ul>
+<h2 id="统计相邻字符对频率">2. 统计相邻字符对频率</h2>
+<p>遍历所有词，统计每个相邻字符（或已合并的子词）对的出现次数。BPE 通过这一统计来识别语言中最常见的模式，以决定接下来要合并的符号对。</p>
+<h2 id="合并最频繁的符号对">3. 合并最频繁的符号对</h2>
+<p>找到出现频率最高的字符对，并将它们在整个数据集中合并成新的子词。例如，如果 <code>(w, e)</code> 是最高频组合，则将其合并为 <code>we</code>；更新所有相关词，并把新子词加入词汇表。</p>
+<h2 id="重复步骤直到达到词表大小">4. 重复步骤直到达到词表大小</h2>
+<p>BPE 是一个迭代过程。每次合并后，统计新的相邻符号对并继续合并，直到词汇表达到预设大小或不再有需要合并的符号对。</p>
+<h2 id="构建最终词汇表并应用到文本">5. 构建最终词汇表并应用到文本</h2>
+<p>最终词汇表既包含初始的字符，又包含所有合并得到的高频子词。新词可以通过这些子词组合表示，因此任何新词都能拆解为已知的子词序列。</p>
+<h3 id="示例bpe-分词过程演示">示例：BPE 分词过程演示</h3>
+<p>以以下词汇集为例：<code>huggingface</code>、<code>hugging</code>、<code>face</code>、<code>hug</code>、<code>hugger</code>、<code>learning</code>、<code>learner</code>、<code>learn</code>。将每个词拆分为字符并加上结束符，然后执行频次统计和合并。以下是前几次合并：</p>
+<ol type="1">
+<li><code>(h, u)</code> → <code>hu</code></li>
+<li><code>(hu, g)</code> → <code>hug</code></li>
+<li><code>(hug, g)</code> → <code>hugg</code></li>
+<li><code>(i, n)</code> → <code>in</code></li>
+<li><code>(in, g)</code> → <code>ing</code></li>
+<li><code>(l, e)</code> → <code>le</code></li>
+<li><code>(le, a)</code> → <code>lea</code></li>
+<li><code>(lea, r)</code> → <code>lear</code></li>
+</ol>
+<p>执行 8 次合并后，词表扩大至 20 个 token，其中包括基本字符（<code>h</code>,<code>u</code>,<code>g</code>,<code>i</code> 等）和新合成的子词（<code>hug</code>,<code>hugg</code>,<code>ing</code>,<code>lear</code> 等）。词 <code>huggingface</code> 经过标记化后为 <code>hugg ing f a c e &lt;/w&gt;</code>，<code>learning</code> 则为 <code>lear n ing &lt;/w&gt;</code>，其余词也可以用类似方式表示。</p>
+<h2 id="bpe-的优缺点">🧪 BPE 的优缺点</h2>
+<p><strong>优点：</strong></p>
+<ul>
+<li><strong>处理未登录词</strong>：通过把词拆解为子词，BPE 可以用已有的子词组合来表示训练集中未出现的词汇。</li>
+<li><strong>减少词汇表大小</strong>：相比基于词的标记化，BPE 可以显著缩小词表规模，使模型更高效。</li>
+<li><strong>提升泛化能力</strong>：子词级表示允许模型学习更细粒度的语言结构，对不同领域、不同语言具有更好的泛化能力。</li>
+</ul>
+<p><strong>缺点：</strong></p>
+<ul>
+<li><strong>合并规则依赖语料</strong>：不同语料得到的合并规则差异较大，多语言场景下可能需要复杂的处理。</li>
+<li><strong>语义完整性可能受损</strong>：如果合并过度，某些合成词的语义仍可能分割，需根据任务选择合适的词表大小。</li>
+</ul>
+<hr />
+<h1 id="总结">📝 总结</h1>
+<p>标记化是自然语言处理的核心步骤，它将文本转换为模型可处理的数字形式。基于词和基于字符的标记化方法简单易理解，但分别存在词汇表过大和序列过长的问题。<strong>BPE</strong> 作为一种子词级标记化算法，以初始化字符集为基础，通过迭代合并高频符号对构建新的子词单元。这种方法兼顾了词表大小和语义表达能力，既能处理未登录词，也能保留足够的语义信息。因此，现代大语言模型通常采用 BPE 或其变种（如 WordPiece、SentencePiece）作为默认的标记化方案。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/shell/" rel="tag"># shell</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2025/09/05/distribute/stream_event/" rel="prev" title="pytorch中的stream和event">
+      <i class="fa fa-chevron-left"></i> pytorch中的stream和event
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BB%80%E4%B9%88%E6%98%AF-token"><span class="nav-number">1.</span> <span class="nav-text">🧠 什么是 Token？</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%96%87%E6%9C%AC%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E4%B8%BA%E6%95%B0%E5%AD%97"><span class="nav-number">2.</span> <span class="nav-text">🔄 文本如何转换为数字？</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B8%B8%E8%A7%81%E7%9A%84%E6%A0%87%E8%AE%B0%E5%8C%96%E6%96%B9%E6%B3%95"><span class="nav-number">3.</span> <span class="nav-text">🔤 常见的标记化方法</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#word-based-tokenization%E5%9F%BA%E4%BA%8E%E8%AF%8D%E7%9A%84%E6%A0%87%E8%AE%B0%E5%8C%96"><span class="nav-number">3.1.</span> <span class="nav-text">1. Word-based Tokenization（基于词的标记化）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#character-based-tokenization%E5%9F%BA%E4%BA%8E%E5%AD%97%E7%AC%A6%E7%9A%84%E6%A0%87%E8%AE%B0%E5%8C%96"><span class="nav-number">3.2.</span> <span class="nav-text">2. Character-based Tokenization（基于字符的标记化）</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#subword-based-tokenizationbpe%E5%AD%97%E8%8A%82%E5%AF%B9%E7%BC%96%E7%A0%81"><span class="nav-number">4.</span> <span class="nav-text">🔬 Subword-based Tokenization：BPE（字节对编码）</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96%E8%AF%8D%E6%B1%87%E8%A1%A8"><span class="nav-number">4.1.</span> <span class="nav-text">1. 初始化词汇表</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%9F%E8%AE%A1%E7%9B%B8%E9%82%BB%E5%AD%97%E7%AC%A6%E5%AF%B9%E9%A2%91%E7%8E%87"><span class="nav-number">4.2.</span> <span class="nav-text">2. 统计相邻字符对频率</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%90%88%E5%B9%B6%E6%9C%80%E9%A2%91%E7%B9%81%E7%9A%84%E7%AC%A6%E5%8F%B7%E5%AF%B9"><span class="nav-number">4.3.</span> <span class="nav-text">3. 合并最频繁的符号对</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%87%8D%E5%A4%8D%E6%AD%A5%E9%AA%A4%E7%9B%B4%E5%88%B0%E8%BE%BE%E5%88%B0%E8%AF%8D%E8%A1%A8%E5%A4%A7%E5%B0%8F"><span class="nav-number">4.4.</span> <span class="nav-text">4. 重复步骤直到达到词表大小</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9E%84%E5%BB%BA%E6%9C%80%E7%BB%88%E8%AF%8D%E6%B1%87%E8%A1%A8%E5%B9%B6%E5%BA%94%E7%94%A8%E5%88%B0%E6%96%87%E6%9C%AC"><span class="nav-number">4.5.</span> <span class="nav-text">5. 构建最终词汇表并应用到文本</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%A4%BA%E4%BE%8Bbpe-%E5%88%86%E8%AF%8D%E8%BF%87%E7%A8%8B%E6%BC%94%E7%A4%BA"><span class="nav-number">4.5.1.</span> <span class="nav-text">示例：BPE 分词过程演示</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#bpe-%E7%9A%84%E4%BC%98%E7%BC%BA%E7%82%B9"><span class="nav-number">4.6.</span> <span class="nav-text">🧪 BPE 的优缺点</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">5.</span> <span class="nav-text">📝 总结</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">PePe</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">10</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">浙ICP备2024078386号 </a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">PePe</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/medium-zoom@1/dist/medium-zoom.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+<script defer src="https://events.vercount.one/js"></script>
+
+</body>
+</html>
