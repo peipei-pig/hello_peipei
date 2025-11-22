@@ -28,7 +28,7 @@
 <meta property="og:description" content="Megatron-LM：使用模型并行训练数十亿参数的语言模型">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2025-11-22T09:50:24.218Z">
-<meta property="article:modified_time" content="2025-11-22T10:48:45.145Z">
+<meta property="article:modified_time" content="2025-11-22T11:05:21.367Z">
 <meta property="article:author" content="PePe">
 <meta property="article:tag" content="paper">
 <meta name="twitter:card" content="summary">
@@ -233,7 +233,7 @@
               <span class="post-meta-item-text">Posted on</span>
               
 
-              <time title="Created: 2025-11-22 17:50:24 / Modified: 18:48:45" itemprop="dateCreated datePublished" datetime="2025-11-22T17:50:24+08:00">2025-11-22</time>
+              <time title="Created: 2025-11-22 17:50:24 / Modified: 19:05:21" itemprop="dateCreated datePublished" datetime="2025-11-22T17:50:24+08:00">2025-11-22</time>
             </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -339,7 +339,7 @@
 <li>权重梯度<span class="math inline">\(\partial A_i, \partial B_i\)</span>天然是分布式的，各GPU各自负责自己分块的更新；不同数据并行实例的权重梯度稍后还需跨节点求和平均，但在模型并行组内部不需要额外同步。</li>
 </ul></li>
 </ul>
-<p>上述过程体现了作者引入的两个关键通信算子<span class="math inline">\(f\)</span>和<span class="math inline">\(g\)</span>的作用:contentReference<span data-index="2">oaicite:2</span>：</p>
+<p>上述过程体现了作者引入的两个关键通信算子<span class="math inline">\(f\)</span>和<span class="math inline">\(g\)</span>的作用:</p>
 <ul>
 <li>运算<span class="math inline">\(g\)</span>在前向是All-Reduce（如将<span class="math inline">\(Z_i\)</span>求和得到<span class="math inline">\(Z\)</span>），在反向则是恒等传递梯度；</li>
 <li>运算<span class="math inline">\(f\)</span>在前向是恒等（如将<span class="math inline">\(X\)</span>复制使用），在反向则是All-Reduce（汇总<span class="math inline">\(\partial X\)</span>）。</li>
@@ -365,31 +365,31 @@
 <li><strong>困惑度 (Perplexity)</strong>：语言模型常用指标，定义为测试集上<span class="math inline">\(2^{\text{交叉熵}}\)</span>。困惑度反映模型预测下一个词的不确定性，值越低表示模型预测越准确。作者报告了WikiText-103数据集的困惑度，用于衡量不同参数规模GPT-2模型的语言建模能力。</li>
 <li><strong>准确率 (Accuracy)</strong>：针对下游任务的评价指标。例如LAMBADA数据集的完形填空任务采用<strong>完句预测准确率</strong>，RACE阅读理解任务采用<strong>选择题准确率</strong>。这些指标衡量模型在特定NLP任务上的表现，数值越高越好。论文中特别关注LAMBADA的单词预测准确率和RACE考试题的准确率提升。</li>
 <li><strong>下游任务综合指标</strong>：对于BERT模型，作者评估了在GLUE基准上的多项任务（MNLI、QQP等）的准确率和在SQuAD问答上的F1/Exact Match等。这些指标综合体现大模型在<strong>迁移学习</strong>场景的效果。论文将不同规模BERT模型在这些任务上的分数进行对比，证明模型规模提升带来的性能增长。</li>
-<li><strong>计算吞吐量</strong>：以每秒处理的浮点运算数来衡量训练效率。作者报告了在512 GPU上达到的<strong>15.1 PetaFLOPs</strong>持续性能，以及单GPU的39 TeraFLOPs为基准:contentReference<span data-index="3">oaicite:3</span>。这一指标展示并行优化的硬件效率，接近理论峰值的比例越高表示并行方法越高效。论文中提到达到单卡峰值30%（采用FP16训练），多卡扩展效率约76%。</li>
+<li><strong>计算吞吐量</strong>：以每秒处理的浮点运算数来衡量训练效率。作者报告了在512 GPU上达到的<strong>15.1 PetaFLOPs</strong>持续性能，以及单GPU的39 TeraFLOPs为基准。这一指标展示并行优化的硬件效率，接近理论峰值的比例越高表示并行方法越高效。论文中提到达到单卡峰值30%（采用FP16训练），多卡扩展效率约76%。</li>
 <li><strong>扩展效率 (Scaling Efficiency)</strong>：定义为实际加速比与理想线性加速比的比值。例如512卡达到76%意味着实际速度约为线性512倍加速的0.76倍。作者通过弱扩展（增加GPU同时增大模型参数）和强扩展（固定模型规模增加GPU）实验评估了该值。高扩展效率表明并行算法在增加计算资源时能有效利用而非浪费算力。</li>
 <li><strong>训练稳定性</strong>：这不是明确的数值指标，但通过<strong>loss曲线</strong>和平稳训练过程来衡量。特别是BERT模型在不同LayerNorm放置方式下的大模型训练是否发散，被作为比较内容。论文通过曲线图展示了原始架构下大模型训练的不稳定，以及调整架构后的稳定下降，从而侧面反映了训练稳定性改进。</li>
 </ul>
 <p>综上，这些指标涵盖<strong>模型效果（困惑度、准确率）</strong>和<strong>系统效率（FLOPs、扩展比）</strong>两个方面。通过同时关注NLP任务表现和资源利用率，作者全面评估了Megatron-LM的优越性。</p>
 <h2 id="五主要实验发现">五、主要实验发现</h2>
 <ul>
-<li><strong>模型并行有效提升了可训练模型规模与性能</strong>：作者成功训练了参数量高达<strong>8.3亿（GPT-2）和3.9亿（BERT）</strong>的超大模型:contentReference<span data-index="4">oaicite:4</span>:contentReference<span data-index="5">oaicite:5</span>（注：原文单位为 billion，即10亿，这里简化描述），显著超出当时广泛使用的模型规模（例如BERT-Large的3.36亿）。随着规模扩大，模型在语言建模和下游任务上的表现<strong>单调提升</strong>:contentReference<span data-index="6">oaicite:6</span>:contentReference<span data-index="7">oaicite:7</span>。这验证了“大模型带来更好效果”的趋势，并证明了只要配套的并行训练得当，提升参数规模依然能带来收益。</li>
-<li><strong>极高的硬件吞吐与可扩展性</strong>：在512 GPU的GPU集群上，Megatron-LM实现了<strong>15.1 PFLOPs</strong>的持续训练吞吐，达到单卡性能的76%扩展效率:contentReference<span data-index="8">oaicite:8</span>。考虑到通信和同步开销，这一效率非常接近线性扩展的理想值，说明作者的方法充分利用了集群计算能力。弱扩展实验显示，模型参数与GPU数量同比增长时，吞吐基本随GPU线性增加；强扩展实验也展示了良好的加速比。这意味着通过本方法，增加算力几乎可以直接用于训练更大模型或加速训练过程，<strong>并行收益接近理想</strong>。</li>
-<li><strong>SOTA水平的任务效果</strong>：训练得到的8.3B GPT-2模型在WikiText103数据集上达到<strong>10.8的困惑度</strong>（此前最佳为15.8）:contentReference<span data-index="9">oaicite:9</span>，在LAMBADA完形填空测试中准确率<strong>66.5%</strong>（此前最佳63.2%）:contentReference<span data-index="10">oaicite:10</span>。同样，3.9B的Megatron-BERT在RACE阅读理解任务上达到<strong>90.9%</strong>准确率（超过此前SOTA的89.4%）:contentReference<span data-index="11">oaicite:11</span>。这些结果表明，通过增加模型容量和使用更长时间预训练，语言模型可以大幅提升对文本的理解和生成能力，刷新多个基准任务的记录。</li>
-<li><strong>架构微调对大模型至关重要</strong>：实验中一个突出的发现是，<strong>LayerNorm的位置</strong>会影响BERT大型模型的训练可行性:contentReference<span data-index="12">oaicite:12</span>:contentReference<span data-index="13">oaicite:13</span>。原始BERT架构在残差连接之后使用LayerNorm（Post-LN），作者发现当参数扩展到数亿规模时训练出现不稳定甚至性能退化。通过改用<strong>Pre-LN架构</strong>（在每个子层计算前应用LayerNorm），模型训练变得稳定，并随着规模增加准确率持续提升:contentReference<span data-index="14">oaicite:14</span>:contentReference<span data-index="15">oaicite:15</span>。这一现象强调了在放大模型尺寸时，<strong>训练稳定性</strong>可能成为瓶颈，需要通过架构调整（或优化器超参调整）来解决。</li>
-<li><strong>工程实现开放且可复用</strong>：作者将完整的训练代码和流水线实现开源在NVIDIA/Megatron-LM仓库:contentReference<span data-index="16">oaicite:16</span>。这意味着研究社区和工业界可以直接使用这一成果来训练自己的大模型。这在当时具有重要意义：不仅证明了方法的可行性，也<strong>降低了技术传播门槛</strong>。许多后续工作（例如微软的Turing-NLG 170亿参数模型）都建立在Megatron-LM的方法之上:contentReference<span data-index="17">oaicite:17</span>:contentReference<span data-index="18">oaicite:18</span>，体现了该工作的影响力和实用价值。</li>
+<li><strong>模型并行有效提升了可训练模型规模与性能</strong>：作者成功训练了参数量高达<strong>8.3亿（GPT-2）和3.9亿（BERT）</strong>的超大模型:（注：原文单位为 billion，即10亿，这里简化描述），显著超出当时广泛使用的模型规模（例如BERT-Large的3.36亿）。随着规模扩大，模型在语言建模和下游任务上的表现<strong>单调提升</strong>。这验证了“大模型带来更好效果”的趋势，并证明了只要配套的并行训练得当，提升参数规模依然能带来收益。</li>
+<li><strong>极高的硬件吞吐与可扩展性</strong>：在512 GPU的GPU集群上，Megatron-LM实现了<strong>15.1 PFLOPs</strong>的持续训练吞吐，达到单卡性能的76%扩展效率。考虑到通信和同步开销，这一效率非常接近线性扩展的理想值，说明作者的方法充分利用了集群计算能力。弱扩展实验显示，模型参数与GPU数量同比增长时，吞吐基本随GPU线性增加；强扩展实验也展示了良好的加速比。这意味着通过本方法，增加算力几乎可以直接用于训练更大模型或加速训练过程，<strong>并行收益接近理想</strong>。</li>
+<li><strong>SOTA水平的任务效果</strong>：训练得到的8.3B GPT-2模型在WikiText103数据集上达到<strong>10.8的困惑度</strong>（此前最佳为15.8），在LAMBADA完形填空测试中准确率<strong>66.5%</strong>（此前最佳63.2%）。同样，3.9B的Megatron-BERT在RACE阅读理解任务上达到<strong>90.9%</strong>准确率（超过此前SOTA的89.4%）。这些结果表明，通过增加模型容量和使用更长时间预训练，语言模型可以大幅提升对文本的理解和生成能力，刷新多个基准任务的记录。</li>
+<li><strong>架构微调对大模型至关重要</strong>：实验中一个突出的发现是，<strong>LayerNorm的位置</strong>会影响BERT大型模型的训练可行性。原始BERT架构在残差连接之后使用LayerNorm（Post-LN），作者发现当参数扩展到数亿规模时训练出现不稳定甚至性能退化。通过改用<strong>Pre-LN架构</strong>（在每个子层计算前应用LayerNorm），模型训练变得稳定，并随着规模增加准确率持续提升。这一现象强调了在放大模型尺寸时，<strong>训练稳定性</strong>可能成为瓶颈，需要通过架构调整（或优化器超参调整）来解决。</li>
+<li><strong>工程实现开放且可复用</strong>：作者将完整的训练代码和流水线实现开源在NVIDIA/Megatron-LM仓库。这意味着研究社区和工业界可以直接使用这一成果来训练自己的大模型。这在当时具有重要意义：不仅证明了方法的可行性，也<strong>降低了技术传播门槛</strong>。许多后续工作（例如微软的Turing-NLG 170亿参数模型）都建立在Megatron-LM的方法之上，体现了该工作的影响力和实用价值。</li>
 </ul>
 <h3 id="关键图表解读">5.1 关键图表解读</h3>
 <p>实验部分包含多幅图表，形象地支持了上述发现：</p>
 <ul>
-<li><strong>扩展效率曲线</strong>：论文的Figure 1展示了不同并行配置下的计算效率对比。其中模型并行（张量并行）随GPU数量增长的吞吐基本接近理想直线，而仅数据并行在高GPU数时效率开始下降。图中标注的76%扩展效率证明了8路模型并行在512卡上仍保持高效:contentReference<span data-index="19">oaicite:19</span>。这一图表直观证明了Megatron-LM方案的<strong>高可扩展性</strong>，支持第一条主要发现。</li>
-<li><strong>验证困惑度随迭代收敛图</strong>：Figure 6绘制了不同规模GPT-2模型在验证集上的困惑度随训练进程（迭代数）的下降趋势:contentReference<span data-index="20">oaicite:20</span>:contentReference<span data-index="21">oaicite:21</span>。从图中可以看到，<strong>较大的模型不仅最终困惑度更低</strong>（例如8.3B模型最终验证PPL约9.27，小模型明显更高），<strong>而且收敛更快</strong>（在相同迭代内大模型达到更低PPL）。这说明增加模型容量带来的收益是双重的：性能提升和收敛加速，支持了“大模型更有效”的论断。</li>
-<li><strong>BERT架构对比训练曲线</strong>：Figure 7比较了原始BERT架构和调整LayerNorm后架构在训练大模型时的loss曲线:contentReference<span data-index="22">oaicite:22</span>:contentReference<span data-index="23">oaicite:23</span>。曲线(a)（原始）出现震荡甚至无法降低，而曲线(b)（调整后）平滑收敛到更低loss。这张图形象地支撑了第四条发现：<strong>正确的LayerNorm位置消除了训练不稳定</strong>，使得3.9B参数BERT成功收敛并取得更高精度。它提醒我们在大模型训练中，小的架构改动会带来巨大影响。</li>
-<li><strong>下游任务结果表格</strong>：论文的Table 3和Table 5汇总了模型在WikiText103、LAMBADA等无监督任务以及RACE、MNLI等下游任务的具体数值:contentReference<span data-index="24">oaicite:24</span>:contentReference<span data-index="25">oaicite:25</span>。例如Table 3清晰列出了355M、2.5B、8.3B各模型的WikiText困惑度和LAMBADA准确率，以及过去SOTA对比:contentReference<span data-index="26">oaicite:26</span>:contentReference<span data-index="27">oaicite:27</span>。这些表格数据一目了然地证明了<strong>模型规模提升带来的性能增益</strong>和SOTA超越，为第二和第三条发现提供了定量依据。</li>
+<li><strong>扩展效率曲线</strong>：论文的Figure 1展示了不同并行配置下的计算效率对比。其中模型并行（张量并行）随GPU数量增长的吞吐基本接近理想直线，而仅数据并行在高GPU数时效率开始下降。图中标注的76%扩展效率证明了8路模型并行在512卡上仍保持高效。这一图表直观证明了Megatron-LM方案的<strong>高可扩展性</strong>，支持第一条主要发现。</li>
+<li><strong>验证困惑度随迭代收敛图</strong>：Figure 6绘制了不同规模GPT-2模型在验证集上的困惑度随训练进程（迭代数）的下降趋势。从图中可以看到，<strong>较大的模型不仅最终困惑度更低</strong>（例如8.3B模型最终验证PPL约9.27，小模型明显更高），<strong>而且收敛更快</strong>（在相同迭代内大模型达到更低PPL）。这说明增加模型容量带来的收益是双重的：性能提升和收敛加速，支持了“大模型更有效”的论断。</li>
+<li><strong>BERT架构对比训练曲线</strong>：Figure 7比较了原始BERT架构和调整LayerNorm后架构在训练大模型时的loss曲线。曲线(a)（原始）出现震荡甚至无法降低，而曲线(b)（调整后）平滑收敛到更低loss。这张图形象地支撑了第四条发现：<strong>正确的LayerNorm位置消除了训练不稳定</strong>，使得3.9B参数BERT成功收敛并取得更高精度。它提醒我们在大模型训练中，小的架构改动会带来巨大影响。</li>
+<li><strong>下游任务结果表格</strong>：论文的Table 3和Table 5汇总了模型在WikiText103、LAMBADA等无监督任务以及RACE、MNLI等下游任务的具体数值。例如Table 3清晰列出了355M、2.5B、8.3B各模型的WikiText困惑度和LAMBADA准确率，以及过去SOTA对比。这些表格数据一目了然地证明了<strong>模型规模提升带来的性能增益</strong>和SOTA超越，为第二和第三条发现提供了定量依据。</li>
 </ul>
 <p>通过以上关键图表，读者可以直观理解Megatron-LM方法的效果：<strong>计算效率高、模型表现优异且架构调整发挥关键作用</strong>。每个图表和表格都对应地支撑了前文的实验结论。</p>
 <p><strong>结果解读与边界</strong>：总体而言，Megatron-LM的实验结果展现了令人信服的性能提升和扩展能力，证明只要训练资源充足，大规模模型的潜力可以被充分挖掘。这一结论对NLP领域影响深远——它为此后出现的更大模型（如GPT-3等）奠定了方法基础，表明采用模型并行等技术能够有效地训练百亿级参数模型。然而，也需要理性看待这些结果的适用范围和局限：</p>
 <ul>
-<li>首先，<strong>成本与能耗边界</strong>：达到论文中的SOTA结果依赖数百GPU日以继夜的计算（论文提及8.3B模型单轮epoch训练需约两天:contentReference<span data-index="28">oaicite:28</span>:contentReference<span data-index="29">oaicite:29</span>）。这种规模的计算代价使得大模型训练主要局限于顶尖实验室和公司。换言之，方法虽然证明可行，但在资源受限环境下难以复现，成本和能耗是现实边界之一。</li>
+<li>首先，<strong>成本与能耗边界</strong>：达到论文中的SOTA结果依赖数百GPU日以继夜的计算（论文提及8.3B模型单轮epoch训练需约两天。这种规模的计算代价使得大模型训练主要局限于顶尖实验室和公司。换言之，方法虽然证明可行，但在资源受限环境下难以复现，成本和能耗是现实边界之一。</li>
 <li><strong>模型规模的收益递减</strong>：尽管论文中性能随规模增长而提升，但并未系统探讨增长到更高参数量时是否存在拐点或瓶颈。后续研究提出了<em>Scaling Law</em>（扩展规律），指出性能提升对数递减。Megatron-LM的结果主要覆盖到8B量级，对于百亿甚或千亿参数是否线性适用，仍存在不确定性（待核实）。</li>
 <li><strong>通用性与其它因素</strong>：论文集中在Transformer语言模型，对其它架构（CNN、RNN）或其它任务的可推广性未做实验。例如视觉模型的大规模训练是否也能直接套用类似方法尚待验证。此外，论文关注规模和并行，本身并未详细讨论优化算法、正则化等对最终性能的影响，这些在更大规模训练时可能变得显著。也就是说，结果的优秀部分归因于更大模型容量，但优化细节或训练数据等因素对结果的贡献没有分别量化。</li>
 <li><strong>评测维度有限</strong>：作者主要以标准基准任务衡量模型，侧重于准确率和困惑度等指标。而对于大模型潜在的其它评测维度（如泛化能力、偏见和公平性、鲁棒性等），论文没有涉猎。这些构成了结果解读的边界：<strong>性能卓越不等于完美</strong>，大模型在实用中还需要考虑更多全面的指标。</li>
@@ -417,7 +417,7 @@
 <h2 id="七业内相关工作对比">七、业内相关工作对比</h2>
 <p>大规模模型训练是近年AI研究的热点，Megatron-LM与其他一些并行化或模型压缩思路有所区别和关联。下面选取几项同期或相关工作进行对比：</p>
 <ul>
-<li><strong>GPipe (2018)</strong> – <em>流水线并行</em>：Google提出的GPipe:contentReference<span data-index="30">oaicite:30</span>将模型不同层切分到串行的设备上，采用微批次流水线方式来并行训练。其问题定义同为突破单卡内存限制，但方法路线不同：GPipe主打<strong>跨层并行</strong>，将模型分段而Megatron-LM主打<strong>层内并行</strong>，在每层内部切分矩阵。GPipe需要将模型重构为pipeline并管理“bubble”延迟，而Megatron-LM只需在层内插入通信。两者可组合（正如Megatron作者所言模型并行与流水线并行正交），GPipe侧重减少峰值内存，Megatron追求充分利用算力。主观评价来看，GPipe实现复杂度较高，需要特殊框架支持（如TensorFlow XLA），训练时需要均衡各分段计算负载，否则会有流水等待。而Megatron-LM实现更简洁直接，在PyTorch里几乎即插即用。但GPipe对通信的需求较低（每阶段仅需传递激活给下游），在超长序列或极深网络时可能更高效。总体而言，二者各擅所长，可结合用于更大模型：业界实践常将Megatron的张量并行与GPipe的分层并行一同使用，实现<strong>2D并行</strong>扩展。</li>
+<li><strong>GPipe (2018)</strong> – <em>流水线并行</em>：Google提出的GPipe将模型不同层切分到串行的设备上，采用微批次流水线方式来并行训练。其问题定义同为突破单卡内存限制，但方法路线不同：GPipe主打<strong>跨层并行</strong>，将模型分段而Megatron-LM主打<strong>层内并行</strong>，在每层内部切分矩阵。GPipe需要将模型重构为pipeline并管理“bubble”延迟，而Megatron-LM只需在层内插入通信。两者可组合（正如Megatron作者所言模型并行与流水线并行正交），GPipe侧重减少峰值内存，Megatron追求充分利用算力。主观评价来看，GPipe实现复杂度较高，需要特殊框架支持（如TensorFlow XLA），训练时需要均衡各分段计算负载，否则会有流水等待。而Megatron-LM实现更简洁直接，在PyTorch里几乎即插即用。但GPipe对通信的需求较低（每阶段仅需传递激活给下游），在超长序列或极深网络时可能更高效。总体而言，二者各擅所长，可结合用于更大模型：业界实践常将Megatron的张量并行与GPipe的分层并行一同使用，实现<strong>2D并行</strong>扩展。</li>
 <li><strong>Mesh-TensorFlow (2018)</strong> – <em>张量划分框架</em>：Shazeer等提出的Mesh-TensorFlow提供了一种在任意分布式设备网格（mesh）上划分张量的方法。它的问题定义也是<strong>在不同设备间划分模型张量</strong>，方法上通过在TensorFlow中声明张量的分布维度，由XLA编译器自动生成并行执行计划。相比之下，Megatron-LM是手工在PyTorch中插入通信实现并行，Mesh-TF则高度依赖编译器优化。Mesh-TF的可组合性强，可以支持多种并行模式混合，但需要使用其DSL重新定义模型，定制成本高。Megatron-LM注重易用，在PyTorch原生模型上稍加修改即可。主观评价，Mesh-TF作为通用框架灵活强大，支持例如TPU上的并行并曾用于谷歌的T5等模型训练；但调试和实现难度较大，模型开发者需要理解并行布局概念。而Megatron-LM胜在<strong>实用效率</strong>，针对Transformer这种规则模型给出了现成优化方案。Mesh-TF依靠XLA，某种程度上预示了未来深度学习编译器的方向；Megatron-LM则在当时硬件软件条件下及时提供了可落地的方案。</li>
 <li><strong>DeepSpeed ZeRO (2020)</strong> – <em>优化器状态并行</em>：微软提出的ZeRO优化器属于数据并行内存优化范畴。它与Megatron-LM问题定义的共同点在于都解决GPU显存不足限制大模型训练，但路线截然不同：ZeRO通过<strong>划分优化器状态和梯度</strong>来降低每张卡的内存占用，不改变模型本身的并行计算顺序。简言之，ZeRO仍是数据并行训练，只是在每步后将各卡的梯度和优化器累积信息分摊存储。这样每张卡只需维护全局1/海量的数据副本，从而支持更大模型。ZeRO与Megatron具备<strong>很强的可组合性</strong>：事实上许多训练栈同时采用Megatron的模型并行和ZeRO的优化器碎片化，使得模型参数、梯度、优化器都得到充分并行。主观上看，ZeRO对现有训练代码改动较少（利用DeepSpeed库封装实现），但它需要频繁通信同步碎片化的梯度，通信量随参数增长线性上升，对网络依赖大。相比之下，Megatron在降低通信频次方面做了优化（每层2次All-Reduce固定）。两者的思想可以结合：Megatron解决<strong>计算和前向内存</strong>，ZeRO解决<strong>梯度和优化器内存</strong>，共同突破多方面瓶颈。未来上百亿参数模型训练中，混合张量并行+ZeRO已成为事实标准配置。</li>
 <li><strong>ALBERT (2019)</strong> – <em>参数共享压缩</em>：Lan等提出的ALBERT针对BERT模型规模瓶颈，采用<strong>跨层参数共享</strong>和向量分解嵌入等方法减少参数总量，以提升模型训练可行性。它解决的是类似问题（BERT超过BERT-Large后效果下降和资源不足），但方法不是并行训练，而是改变模型结构使参数更少、更高效。例如将每层Transformer权重共享，从而大幅减少参数量。Megatron-LM和ALBERT可以说取径相反：一个是通过增加硬件资源并行以容纳更多参数，一个是通过优化网络设计在同样资源下减少参数。这两种可一定程度组合（比如使用模型并行训练ALBERT也可进一步提高效率），但因为ALBERT减少参数也意味着容量下降，后来的实践证明不共享参数的大模型往往效果更好。因此Megatron的方法更偏向“用硬件 brute force 实现效果提升”，而ALBERT属于“巧妙设计模型压缩”。主观评价，ALBERT对学术研究有意义，启发了参数高效利用的思路，但在真正追求SOTA时还是<strong>更大的非共享模型</strong>胜出。Megatron-LM代表的路线路径在后来居上，证明了只要能训练，<strong>大模型的效果终将优于小模型+参数共享</strong>。</li>
