@@ -27,8 +27,8 @@
 <meta property="og:site_name" content="果冻甜甜的">
 <meta property="og:description" content="Megatron-LM">
 <meta property="og:locale" content="en_US">
-<meta property="article:published_time" content="2025-11-22T03:39:36.885Z">
-<meta property="article:modified_time" content="2025-11-22T03:39:36.885Z">
+<meta property="article:published_time" content="2025-11-22T03:43:29.078Z">
+<meta property="article:modified_time" content="2025-11-22T03:43:29.078Z">
 <meta property="article:author" content="PePe">
 <meta property="article:tag" content="paper">
 <meta name="twitter:card" content="summary">
@@ -232,7 +232,7 @@
               </span>
               <span class="post-meta-item-text">Posted on</span>
 
-              <time title="Created: 2025-11-22 11:39:36" itemprop="dateCreated datePublished" datetime="2025-11-22T11:39:36+08:00">2025-11-22</time>
+              <time title="Created: 2025-11-22 11:43:29" itemprop="dateCreated datePublished" datetime="2025-11-22T11:43:29+08:00">2025-11-22</time>
             </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -267,40 +267,40 @@
         <span id="more"></span>
 <hr />
 <h2 id="一论文速览">一、论文速览</h2>
-<p>《Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism》聚焦的问题是：<strong>在单卡显存远远不够的情况下，如何在 GPU 集群上高效训练多亿到几十亿参数规模的 Transformer 语言模型</strong>。作者提出了一种专门为 Transformer 设计的 <strong>层内模型并行（intra-layer model parallelism / tensor parallelism）</strong>：将自注意力和前馈网络中的大矩阵按行/列拆分到多块 GPU 上，并在关键位置插入少量 <code>all-reduce</code> / <code>all-gather</code> 通信以拼合结果，从而突破单卡显存限制。该方案完全基于原生 PyTorch，不需要新的编译器或 DSL，并且可以与数据并行、流水并行组合使用；在 512 张 V100 上，作者训练了 8.3B GPT-2 类模型和 3.9B BERT 类模型，达到了 15.1 PFLOPs、约 76% 强扩展效率，并在 WikiText-103、LAMBADA、RACE 等任务上取得当时的 SOTA。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism">arXiv</a>)</p>
+<p>《Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism》聚焦的问题是：<strong>在单卡显存远远不够的情况下，如何在 GPU 集群上高效训练多亿到几十亿参数规模的 Transformer 语言模型</strong>。作者提出了一种专门为 Transformer 设计的 <strong>层内模型并行（intra-layer model parallelism / tensor parallelism）</strong>：将自注意力和前馈网络中的大矩阵按行/列拆分到多块 GPU 上，并在关键位置插入少量 <code>all-reduce</code> / <code>all-gather</code> 通信以拼合结果，从而突破单卡显存限制。该方案完全基于原生 PyTorch，不需要新的编译器或 DSL，并且可以与数据并行、流水并行组合使用；在 512 张 V100 上，作者训练了 8.3B GPT-2 类模型和 3.9B BERT 类模型，达到了 15.1 PFLOPs、约 76% 强扩展效率，并在 WikiText-103、LAMBADA、RACE 等任务上取得当时的 SOTA。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053">arXiv</a>)</p>
 <h2 id="二论文结构概览">二、论文结构概览</h2>
 <ol type="1">
-<li><p><strong>Introduction</strong> 说明大规模 Transformer 语言模型在效果上的优势，以及显存资源对训练的制约，指出仅靠数据并行已经难以继续扩展模型规模。引出 Megatron-LM 的核心思路：通过简单、高效的层内模型并行，把每一层的大矩阵拆到多卡上计算，并给出 8.3B / 3.9B 模型的主要实验结果。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism">arXiv</a>)</p></li>
-<li><p><strong>Related Work</strong> 回顾 GPT-2、BERT 等典型大模型，以及常见的分布式训练方式（数据并行、传统按层模型并行、GPipe/PipeDream 这类流水并行），指出这些方法在显存利用、通信开销、多机扩展方面的不足。通过这部分，读者可以把 Megatron-LM 放在“大模型并行训练方法谱系”中来理解。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism">arXiv</a>)</p></li>
-<li><p><strong>Model Parallel Transformer</strong> 全文技术核心：详细介绍如何在 Transformer 自注意力和 MLP 两个子层中对权重矩阵进行按行/按列切分，如何安排前向和反向中的 <code>all-reduce</code> / <code>all-gather</code>，以及如何处理 embedding / 输出层等特殊模块。这一部分实际上定义了后来广泛使用的 “Megatron 式 Tensor Parallelism” 的具体语义。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</p></li>
-<li><p><strong>Implementation Details</strong> 介绍在多机多卡集群上的部署细节，包括：硬件拓扑（32 台 DGX-2H，512 张 V100，NVSwitch+InfiniBand）、通信后端（NCCL）、混合精度训练（FP16+loss scaling）、优化器配置等。这里给出了一些影响实际吞吐的关键工程选择，对希望在自己系统里复现实验或移植思想的读者非常有参考价值。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</p></li>
-<li><p><strong>Experiments</strong> 系统评估 Megatron-LM 的扩展性和任务性能：在 GPT-2 类（1.2B–8.3B）和 BERT 类（0.3B–3.9B）模型上，报告 FLOPs 利用率、强/弱扩展效率，以及 WikiText-103、LAMBADA、RACE 等下游任务上的 SOTA 结果。同时分析 BERT 架构中 LayerNorm 放置位置对大模型训练稳定性和效果的影响。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism">arXiv</a>)</p></li>
-<li><p><strong>Conclusion</strong> 总结提出的 intra-layer 模型并行方案及其实验结果，强调该方法简单、高效、易与数据并行和流水并行结合，并指出这为后续更大规模（甚至 trillion 参数级）的模型训练铺平了道路。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism">arXiv</a>)</p></li>
+<li><p><strong>Introduction</strong> 说明大规模 Transformer 语言模型在效果上的优势，以及显存资源对训练的制约，指出仅靠数据并行已经难以继续扩展模型规模。引出 Megatron-LM 的核心思路：通过简单、高效的层内模型并行，把每一层的大矩阵拆到多卡上计算，并给出 8.3B / 3.9B 模型的主要实验结果。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053">arXiv</a>)</p></li>
+<li><p><strong>Related Work</strong> 回顾 GPT-2、BERT 等典型大模型，以及常见的分布式训练方式（数据并行、传统按层模型并行、GPipe/PipeDream 这类流水并行），指出这些方法在显存利用、通信开销、多机扩展方面的不足。通过这部分，读者可以把 Megatron-LM 放在“大模型并行训练方法谱系”中来理解。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053">arXiv</a>)</p></li>
+<li><p><strong>Model Parallel Transformer</strong> 全文技术核心：详细介绍如何在 Transformer 自注意力和 MLP 两个子层中对权重矩阵进行按行/按列切分，如何安排前向和反向中的 <code>all-reduce</code> / <code>all-gather</code>，以及如何处理 embedding / 输出层等特殊模块。这一部分实际上定义了后来广泛使用的 “Megatron 式 Tensor Parallelism” 的具体语义。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</p></li>
+<li><p><strong>Implementation Details</strong> 介绍在多机多卡集群上的部署细节，包括：硬件拓扑（32 台 DGX-2H，512 张 V100，NVSwitch+InfiniBand）、通信后端（NCCL）、混合精度训练（FP16+loss scaling）、优化器配置等。这里给出了一些影响实际吞吐的关键工程选择，对希望在自己系统里复现实验或移植思想的读者非常有参考价值。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</p></li>
+<li><p><strong>Experiments</strong> 系统评估 Megatron-LM 的扩展性和任务性能：在 GPT-2 类（1.2B–8.3B）和 BERT 类（0.3B–3.9B）模型上，报告 FLOPs 利用率、强/弱扩展效率，以及 WikiText-103、LAMBADA、RACE 等下游任务上的 SOTA 结果。同时分析 BERT 架构中 LayerNorm 放置位置对大模型训练稳定性和效果的影响。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053">arXiv</a>)</p></li>
+<li><p><strong>Conclusion</strong> 总结提出的 intra-layer 模型并行方案及其实验结果，强调该方法简单、高效、易与数据并行和流水并行结合，并指出这为后续更大规模（甚至 trillion 参数级）的模型训练铺平了道路。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053">arXiv</a>)</p></li>
 </ol>
 <blockquote>
 <p><strong>核心思想：</strong> Megatron-LM 提出了一套专为 Transformer 设计的层内张量并行方案，通过对每层中的大矩阵按行/列规则切分并在固定位置插入少量集体通信，在不改变模型结构和框架的前提下，将 GPT/BERT 类语言模型扩展到多亿至几十亿参数规模，并在多机多卡集群上实现了高 FLOPs 利用率与实测任务性能的同步提升。</p>
 </blockquote>
 <hr />
 <h2 id="三方法与系统设计拆解">三、方法与系统设计拆解</h2>
-<p>Megatron-LM 的方法部分针对的是一个很直接的系统问题：<strong>如何在不重写框架、不引入新编译器的前提下，把单层内部的大矩阵拆给多张 GPU 做，又把通信次数压到很少？</strong> 作者围绕 Transformer 的 MLP、自注意力和 Embedding 三个“算力与显存大头”，设计了一整套张量并行（tensor parallel）策略，并通过有限次 <code>all-reduce</code> / <code>all-gather</code> 完成必要的同步。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</p>
+<p>Megatron-LM 的方法部分针对的是一个很直接的系统问题：<strong>如何在不重写框架、不引入新编译器的前提下，把单层内部的大矩阵拆给多张 GPU 做，又把通信次数压到很少？</strong> 作者围绕 Transformer 的 MLP、自注意力和 Embedding 三个“算力与显存大头”，设计了一整套张量并行（tensor parallel）策略，并通过有限次 <code>all-reduce</code> / <code>all-gather</code> 完成必要的同步。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</p>
 <p><strong>主要在解决的子问题包括：</strong></p>
 <ul>
-<li>如何在 <strong>MLP 两个大线性层</strong> 上进行张量切分，既降低单卡显存，又控制同步次数在可接受范围？(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</li>
-<li>如何在 <strong>自注意力（Q/K/V 投影 + 输出线性层）</strong> 上并行，让每张 GPU 负责一部分 head，同时保证最终 attention 输出正确？(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</li>
-<li>如何对 <strong>输入/输出 embedding</strong> 做并行，避免 <code>batch × seq × vocab</code> 级别的巨大通信，同时兼顾权重共享和 cross-entropy 计算？(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</li>
-<li>如何将上述层内并行与 <strong>数据并行</strong> 组合，把模型规模与吞吐量一起扩展到数百 GPU？(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</li>
+<li>如何在 <strong>MLP 两个大线性层</strong> 上进行张量切分，既降低单卡显存，又控制同步次数在可接受范围？(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</li>
+<li>如何在 <strong>自注意力（Q/K/V 投影 + 输出线性层）</strong> 上并行，让每张 GPU 负责一部分 head，同时保证最终 attention 输出正确？(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</li>
+<li>如何对 <strong>输入/输出 embedding</strong> 做并行，避免 <code>batch × seq × vocab</code> 级别的巨大通信，同时兼顾权重共享和 cross-entropy 计算？(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</li>
+<li>如何将上述层内并行与 <strong>数据并行</strong> 组合，把模型规模与吞吐量一起扩展到数百 GPU？(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</li>
 </ul>
 <h3 id="核心模块一览">3.1 核心模块一览</h3>
 <ul>
-<li><p><strong>MLP：列切分的第一层线性（Column Parallel Linear）</strong> 第一层线性层 (X W_1) 的权重 (W_1) 按列切分为 (W_{1,1}, W_{1,2}, …)，不同 GPU 负责输出 hidden 的不同切片；GeLU 在各 GPU 本地计算，后续根据需要再做 <code>all-reduce</code> / <code>all-gather</code>。这种设计避免了在激活前就同步，从而减少通信。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</p></li>
-<li><p><strong>MLP：行切分的第二层线性（Row Parallel Linear）</strong> 第二层线性层 (Y W_2) 中，权重 (W_2) 按行切分，各 GPU 仅持有一部分行。输入 (Y) 已经是按列切好的局部张量，每个 GPU 独立计算局部输出，最后通过一次 <code>all-reduce</code> 累加求和得到完整输出。这样 MLP 两层整体只需少量同步。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</p></li>
-<li><p><strong>自注意力：按 head/列切分的并行多头注意力</strong> Q/K/V 投影矩阵按列切分，各 GPU 负责一部分 heads 的计算；attention 完成后，输出线性层按行切分，每个 GPU 得到局部输出，再通过 <code>all-reduce</code> 得到完整 hidden 表示。整体上，自注意力模块的前向+反向只引入固定几次集体通信。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</p></li>
+<li><p><strong>MLP：列切分的第一层线性（Column Parallel Linear）</strong> 第一层线性层 (X W_1) 的权重 (W_1) 按列切分为 (W_{1,1}, W_{1,2}, …)，不同 GPU 负责输出 hidden 的不同切片；GeLU 在各 GPU 本地计算，后续根据需要再做 <code>all-reduce</code> / <code>all-gather</code>。这种设计避免了在激活前就同步，从而减少通信。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</p></li>
+<li><p><strong>MLP：行切分的第二层线性（Row Parallel Linear）</strong> 第二层线性层 (Y W_2) 中，权重 (W_2) 按行切分，各 GPU 仅持有一部分行。输入 (Y) 已经是按列切好的局部张量，每个 GPU 独立计算局部输出，最后通过一次 <code>all-reduce</code> 累加求和得到完整输出。这样 MLP 两层整体只需少量同步。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</p></li>
+<li><p><strong>自注意力：按 head/列切分的并行多头注意力</strong> Q/K/V 投影矩阵按列切分，各 GPU 负责一部分 heads 的计算；attention 完成后，输出线性层按行切分，每个 GPU 得到局部输出，再通过 <code>all-reduce</code> 得到完整 hidden 表示。整体上，自注意力模块的前向+反向只引入固定几次集体通信。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</p></li>
 <li><p><strong>I/O Embedding：词表维度上的并行 + 并行 cross-entropy</strong> embedding 矩阵在 vocab 维度上切分：</p>
 <ul>
 <li>输入端：每 GPU 存一部分 vocab，对应 tokens 查表后，用 <code>all-reduce</code> 合成完整 embedding；</li>
-<li>输出端：将 <code>all-gather</code> 和 cross-entropy loss 计算融合成“并行 cross-entropy”，把原本 <code>batch × seq × vocab</code> 的通信，缩减为 <code>batch × seq</code> 规模的数据交换。(<a target="_blank" rel="noopener" href="https://minjiazhang.github.io/courses/sp24-resource/Megatron-LM.pdf?utm_source=chatgpt.com" title="Megatron-LM.pdf - Minjia Zhang">Minjia Zhang</a>)</li>
+<li>输出端：将 <code>all-gather</code> 和 cross-entropy loss 计算融合成“并行 cross-entropy”，把原本 <code>batch × seq × vocab</code> 的通信，缩减为 <code>batch × seq</code> 规模的数据交换。(<a target="_blank" rel="noopener" href="https://minjiazhang.github.io/courses/sp24-resource/Megatron-LM.pdf">Minjia Zhang</a>)</li>
 </ul></li>
-<li><p><strong>张量并行 × 数据并行的组合</strong> 将上述张量并行视为“模型并行组”内部的事，再在其外层套一圈数据并行。每个数据并行组内是一组做 TP 的 GPU，组间通过数据并行同步参数/梯度，实现模型规模和 batch 尺度的双向扩展。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</p></li>
+<li><p><strong>张量并行 × 数据并行的组合</strong> 将上述张量并行视为“模型并行组”内部的事，再在其外层套一圈数据并行。每个数据并行组内是一组做 TP 的 GPU，组间通过数据并行同步参数/梯度，实现模型规模和 batch 尺度的双向扩展。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</p></li>
 </ul>
 <h3 id="数据流与控制流示意文字版">3.2 数据流与控制流示意（文字版）</h3>
 <p>可以用以下“从输入到输出”的流程来理解 Megatron-LM 的张量并行数据流与控制流：</p>
@@ -309,7 +309,7 @@
 <ul>
 <li>输入 tokens 分发到每张 GPU；</li>
 <li>每张 GPU 持有 embedding 的一部分列，局部查表得到局部 embedding；</li>
-<li>一次 <code>all-reduce</code> 把局部 embedding 聚合为完整的 hidden 表示 ()。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</li>
+<li>一次 <code>all-reduce</code> 把局部 embedding 聚合为完整的 hidden 表示 ()。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</li>
 </ul></li>
 <li><p><strong>Transformer 层 – 自注意力块</strong></p>
 <ol type="1">
@@ -318,7 +318,7 @@
 <li>权重按列切分，各 GPU 计算自己那部分 heads 对应的 Q/K/V；</li>
 </ul></li>
 <li>在每张 GPU 上独立计算本地 heads 的自注意力（Q·Kᵀ / √d → softmax → ×V）；</li>
-<li><p>输出线性层按行切分，各 GPU 得到局部输出，最后通过一次 <code>all-reduce</code> 得到完整 hidden 表示。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</p></li>
+<li><p>输出线性层按行切分，各 GPU 得到局部输出，最后通过一次 <code>all-reduce</code> 得到完整 hidden 表示。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</p></li>
 </ol></li>
 <li><p><strong>MLP 块</strong></p>
 <ol type="1">
@@ -328,24 +328,24 @@
 </ul></li>
 <li><p>第二层线性：行切分</p>
 <ul>
-<li>每张 GPU 计算 (Z_i = Y_i W_{2,i})，通过 <code>all-reduce</code> 将各 GPU 局部输出相加，得到整体输出。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</li>
+<li>每张 GPU 计算 (Z_i = Y_i W_{2,i})，通过 <code>all-reduce</code> 将各 GPU 局部输出相加，得到整体输出。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</li>
 </ul></li>
 </ol></li>
 <li><p><strong>反向传播中的通信</strong></p>
 <ul>
 <li>对列切分层：前向可不 <code>all-gather</code>，反向需要合并梯度；</li>
 <li>对行切分层：前向需要一次 <code>all-reduce</code>，反向梯度可以局部更新；</li>
-<li>结合注意力与 MLP，一个完整的前向+反向中，每层总共约 4 次集体通信。(<a target="_blank" rel="noopener" href="https://minjiazhang.github.io/courses/sp24-resource/Megatron-LM.pdf?utm_source=chatgpt.com" title="Megatron-LM.pdf - Minjia Zhang">Minjia Zhang</a>)</li>
+<li>结合注意力与 MLP，一个完整的前向+反向中，每层总共约 4 次集体通信。(<a target="_blank" rel="noopener" href="https://minjiazhang.github.io/courses/sp24-resource/Megatron-LM.pdf">Minjia Zhang</a>)</li>
 </ul></li>
 <li><p><strong>输出层与 loss</strong></p>
 <ul>
 <li>输出 embedding 与输入 embedding 共享权重，并在 vocab 维度切分；</li>
-<li>通过并行 cross-entropy，将 logits 的合并与 loss 计算融合，通信规模大幅降低。(<a target="_blank" rel="noopener" href="https://minjiazhang.github.io/courses/sp24-resource/Megatron-LM.pdf?utm_source=chatgpt.com" title="Megatron-LM.pdf - Minjia Zhang">Minjia Zhang</a>)</li>
+<li>通过并行 cross-entropy，将 logits 的合并与 loss 计算融合，通信规模大幅降低。(<a target="_blank" rel="noopener" href="https://minjiazhang.github.io/courses/sp24-resource/Megatron-LM.pdf">Minjia Zhang</a>)</li>
 </ul></li>
 <li><p><strong>外层数据并行</strong></p>
 <ul>
 <li>TP 组内部完成上述所有操作后，按常规数据并行方式在组间做梯度 <code>all-reduce</code>；</li>
-<li>从全局看，是“组内模型并行 + 组间数据并行”的双层结构。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</li>
+<li>从全局看，是“组内模型并行 + 组间数据并行”的双层结构。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</li>
 </ul></li>
 </ol>
 <h3 id="关键假设与适用范围">3.3 关键假设与适用范围</h3>
@@ -354,13 +354,13 @@
 <ul>
 <li>所有层都由“多头注意力 + 两层 MLP”堆叠，hidden size 基本一致；</li>
 <li>这使得简单的“行切/列切 + 固定通信模式”在所有层上都能复用。</li>
-<li>对高度异构或带大量动态分支的结构，直接套用会变得复杂。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</li>
+<li>对高度异构或带大量动态分支的结构，直接套用会变得复杂。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</li>
 </ul></li>
 <li><p><strong>假设二：组内网络带宽和延迟足够好</strong></p>
 <ul>
 <li>默认 TP 组内 GPU 之间通过 NVLink/NVSwitch 高速互联，跨节点通过多条 InfiniBand 连接；</li>
 <li>在这样的拓扑下，每层 4 次左右的集体通信是可以接受的。</li>
-<li>在带宽较低或拓扑复杂的环境下，通信可能会成为主要瓶颈。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</li>
+<li>在带宽较低或拓扑复杂的环境下，通信可能会成为主要瓶颈。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</li>
 </ul></li>
 <li><p><strong>假设三：切分后负载在不同 GPU 之间大致均衡</strong></p>
 <ul>
@@ -370,7 +370,7 @@
 <li><p><strong>假设四：通信原语实现高效稳定</strong></p>
 <ul>
 <li>强依赖 NCCL 等库高效实现 <code>all-reduce</code> / <code>all-gather</code> 等操作；</li>
-<li>若通信库调优不足或底层网络栈存在问题，即便算法结构相同，实际性能也可能大打折扣。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</li>
+<li>若通信库调优不足或底层网络栈存在问题，即便算法结构相同，实际性能也可能大打折扣。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</li>
 </ul></li>
 <li><p><strong>假设五：模型规模和 batch 规模足够大，可以摊薄通信成本</strong></p>
 <ul>
@@ -383,7 +383,7 @@
 <li><strong>DataLoader / 数据通路</strong>：基本不改数据格式，主要需要在 embedding/输出层适配切分后的张量布局。</li>
 <li><strong>并行调度</strong>：在数据并行之外增加“模型并行组”的概念，形成组内 TP + 组间 DP 的双层调度。</li>
 <li><strong>模型并行（TP）</strong>：行切/列切线性层、按 head 的自注意力并行、embedding 并行，构成现代 TP 的原型。</li>
-<li><strong>kernel 与算子</strong>：大多数算子仍是标准 GEMM/attention，只是张量形状和 layout 按 TP 方向变化；并行 cross-entropy 是通信与算子融合的代表。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</li>
+<li><strong>kernel 与算子</strong>：大多数算子仍是标准 GEMM/attention，只是张量形状和 layout 按 TP 方向变化；并行 cross-entropy 是通信与算子融合的代表。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</li>
 <li><strong>通信 backend</strong>：高度依赖 NCCL 等库高效实现集体操作，是 TP 性能的基础。</li>
 <li><strong>配置与自动调参</strong>：TP size、DP size 等直接决定单卡显存占用和通信/计算比例，是系统配置的关键维度。</li>
 </ul>
@@ -394,7 +394,7 @@
 <ul>
 <li>模型参数总量 (P) 尽可能大（扩展到 multi-billion 参数）；</li>
 <li>单步训练时间 (T) 尽可能小，FLOPs 利用率尽可能高；</li>
-<li>通信开销相对可控，可以在实际集群上高效运行。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism">arXiv</a>)</li>
+<li>通信开销相对可控，可以在实际集群上高效运行。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053">arXiv</a>)</li>
 </ul>
 <p>可以理解为隐含的目标：</p>
 <ul>
@@ -404,15 +404,15 @@
 </ul></li>
 <li><p><strong>目标 2：在给定网络条件下最小化通信开销相对占比</strong></p>
 <ul>
-<li>每层只做有限次、模式固定的 <code>all-reduce</code> / <code>all-gather</code>，并尽量让通信的数据量与参数切片大小相关，而不是与 <code>batch × seq × vocab</code> 这种大张量直接成正比。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</li>
+<li>每层只做有限次、模式固定的 <code>all-reduce</code> / <code>all-gather</code>，并尽量让通信的数据量与参数切片大小相关，而不是与 <code>batch × seq × vocab</code> 这种大张量直接成正比。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</li>
 </ul></li>
 <li><p><strong>目标 3：放大模型规模带来的性能收益，而不是“只堆参数”</strong></p>
 <ul>
-<li>通过在 WikiText-103、LAMBADA、RACE 等任务上报告 SOTA，证明模型变大有实质任务收益。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism">arXiv</a>)</li>
+<li>通过在 WikiText-103、LAMBADA、RACE 等任务上报告 SOTA，证明模型变大有实质任务收益。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053">arXiv</a>)</li>
 </ul></li>
 </ul>
 <h3 id="核心评估指标">4.2 核心评估指标</h3>
-<p>论文主要使用了以下几类指标来评估方法效果：(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism">arXiv</a>)</p>
+<p>论文主要使用了以下几类指标来评估方法效果：(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053">arXiv</a>)</p>
 <ul>
 <li><p><strong>模型参数规模（#Params）</strong></p>
 <ul>
@@ -422,14 +422,14 @@
 </ul></li>
 <li><p><strong>FLOPs 利用率 / Sustained FLOPs</strong></p>
 <ul>
-<li>单卡基线：1.2B 模型在单 V100 上能 sustain 39 TFLOPs，约为理论峰值的 30%。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</li>
-<li>多卡训练：8.3B 模型在 512 张 V100 上能达到 15.1 PFLOPs，约 76% 强扩展效率。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</li>
+<li>单卡基线：1.2B 模型在单 V100 上能 sustain 39 TFLOPs，约为理论峰值的 30%。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</li>
+<li>多卡训练：8.3B 模型在 512 张 V100 上能达到 15.1 PFLOPs，约 76% 强扩展效率。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</li>
 <li>该指标体现“GPU 被用得有多满”，是系统性能的硬指标。</li>
 </ul></li>
 <li><p><strong>扩展效率（Scaling Efficiency）</strong></p>
 <ul>
 <li>强扩展：保持模型和 batch 不变，增加 GPU 数，观察吞吐变化和效率；</li>
-<li>弱扩展：随 GPU 数增加成比例地增大模型规模或 batch，看 per-GPU 利用率是否稳定。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</li>
+<li>弱扩展：随 GPU 数增加成比例地增大模型规模或 batch，看 per-GPU 利用率是否稳定。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</li>
 <li>Megatron-LM 报告，在 1–8 卡模型并行 + 64-way 数据并行的 512 GPU 场景下，强扩展效率约为 74–76%。</li>
 </ul></li>
 <li><p><strong>下游任务性能（NLP Benchmark）</strong></p>
@@ -437,22 +437,22 @@
 <li><p>GPT-2 类模型：</p>
 <ul>
 <li>WikiText-103 perplexity：10.8（相对 15.8 的 SOTA 有明显提升）；</li>
-<li>LAMBADA 准确率：66.5%（优于 63.2% 的 SOTA）。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism">arXiv</a>)</li>
+<li>LAMBADA 准确率：66.5%（优于 63.2% 的 SOTA）。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053">arXiv</a>)</li>
 </ul></li>
 <li><p>BERT 类模型：</p>
 <ul>
-<li>RACE 准确率：90.9%（优于 89.4% 的 SOTA）。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism">arXiv</a>)</li>
+<li>RACE 准确率：90.9%（优于 89.4% 的 SOTA）。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053">arXiv</a>)</li>
 </ul></li>
 <li><p>这些指标证明大模型不仅“能训出来”，而且“能带来更好的任务效果”。</p></li>
 </ul></li>
 <li><p><strong>训练稳定性相关指标（如收敛曲线）</strong></p>
 <ul>
-<li>尤其在 BERT 大模型中，对比不同 LayerNorm 布局下的训练 loss 收敛情况，展示了部分架构选择在大规模下会导致训练不稳定。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</li>
+<li>尤其在 BERT 大模型中，对比不同 LayerNorm 布局下的训练 loss 收敛情况，展示了部分架构选择在大规模下会导致训练不稳定。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</li>
 </ul></li>
 </ul>
 <hr />
 <h2 id="五主要实验发现">五、主要实验发现</h2>
-<p>综合来看，Megatron-LM 在实验部分传递的结论可以用几条工程化的说法概括：(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism">arXiv</a>)</p>
+<p>综合来看，Megatron-LM 在实验部分传递的结论可以用几条工程化的说法概括：(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053">arXiv</a>)</p>
 <ul>
 <li>采用层内张量并行，可以在 512 张 V100 GPU 上训练 <strong>8.3B GPT-2 类模型</strong> 和 <strong>3.9B BERT 类模型</strong>，突破了当时通用 GPU 上的模型规模极限。</li>
 <li>在强基线（1.2B 单卡 39 TFLOPs ≈ 30% 峰值）的基础上，8.3B 模型在 512 卡上依然能 sustain 15.1 PFLOPs，对应约 <strong>76% 的强扩展效率</strong>。</li>
@@ -463,24 +463,24 @@
 <ul>
 <li><p><strong>扩展性图：吞吐/效率 vs GPU 数</strong></p>
 <ul>
-<li>展示了从单 GPU 到 512 GPU 的强、弱扩展曲线：随着 GPU 数增加，吞吐接近线性提升，强扩展效率仍保持在 ~74–76%。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</li>
+<li>展示了从单 GPU 到 512 GPU 的强、弱扩展曲线：随着 GPU 数增加，吞吐接近线性提升，强扩展效率仍保持在 ~74–76%。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</li>
 <li>这个图支撑了“TP 在大规模集群上是可扩展的”这一主张。</li>
 </ul></li>
 <li><p><strong>任务性能 vs 模型规模曲线</strong></p>
 <ul>
 <li>例如 GPT-2 模型在 WikiText-103、LAMBADA 上的性能随参数规模的变化；</li>
-<li>趋势是：模型越大，效果越好，8.3B 模型明显优于之前的 SOTA。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism">arXiv</a>)</li>
+<li>趋势是：模型越大，效果越好，8.3B 模型明显优于之前的 SOTA。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053">arXiv</a>)</li>
 <li>这说明“扩展模型不是纯炫技，而是能换来真实的任务收益”。</li>
 </ul></li>
 <li><p><strong>BERT 架构变体的收敛曲线（不同 LN 布局对比）</strong></p>
 <ul>
 <li>图中对比了不同 LayerNorm 放置方式下的训练 loss 随 step 变化；</li>
-<li>可以看出某些布局在 3.9B 模型上难以收敛，而 Pre-LN 更稳定、效果更好。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</li>
+<li>可以看出某些布局在 3.9B 模型上难以收敛，而 Pre-LN 更稳定、效果更好。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</li>
 <li>这强调了在大规模 regime 下架构细节的重要性。</li>
 </ul></li>
 </ul>
 <p><strong>结果解读与边界</strong></p>
-<p>从结果来看，Megatron-LM 在它关注的核心问题上给出了比较完整的证据链：(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism">arXiv</a>)</p>
+<p>从结果来看，Megatron-LM 在它关注的核心问题上给出了比较完整的证据链：(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053">arXiv</a>)</p>
 <ul>
 <li>系统层面：有单卡强基线，有 512 卡扩展结果，有 FLOPs 利用率和扩展效率指标；</li>
 <li>模型效果层面：在多个公开基准上达到或超越 SOTA，且清晰展示了“模型规模 → 性能”的收益曲线；</li>
@@ -489,32 +489,32 @@
 <p>但也有一些边界和未覆盖的点需要读者自己脑补：</p>
 <ul>
 <li>实验仅在 NVIDIA 自家硬件和栈上完成，对不同硬件/通信库的泛化需要自己评估；</li>
-<li>没有与当时的其他并行方案（如 GPipe/PipeDream 等）进行更细致的系统 head-to-head 对比；(<a target="_blank" rel="noopener" href="https://minjiazhang.github.io/courses/sp24-resource/Megatron-LM.pdf?utm_source=chatgpt.com" title="Megatron-LM.pdf - Minjia Zhang">Minjia Zhang</a>)</li>
+<li>没有与当时的其他并行方案（如 GPipe/PipeDream 等）进行更细致的系统 head-to-head 对比；(<a target="_blank" rel="noopener" href="https://minjiazhang.github.io/courses/sp24-resource/Megatron-LM.pdf">Minjia Zhang</a>)</li>
 <li>对通信开销的理论建模和复杂拓扑下的表现，只有经验性说明，没有给出更 formal 的分析。</li>
 </ul>
 <hr />
 <h2 id="六优点与局限">六、优点与局限</h2>
 <h3 id="亮点strengths">亮点（Strengths）</h3>
 <ul>
-<li><p><strong>问题选择到位：直接瞄准“多亿参数 Transformer 怎么训”这个核心痛点</strong> 把显存瓶颈和数据并行的局限讲清楚，以 GPT-2/BERT 为例说明“大模型确实有用”，问题动机非常自然且重要。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism">arXiv</a>)</p></li>
+<li><p><strong>问题选择到位：直接瞄准“多亿参数 Transformer 怎么训”这个核心痛点</strong> 把显存瓶颈和数据并行的局限讲清楚，以 GPT-2/BERT 为例说明“大模型确实有用”，问题动机非常自然且重要。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053">arXiv</a>)</p></li>
 <li><p><strong>方法规则、简单、工程友好</strong> 行切/列切 + 少量固定位置的集体通信，几乎可以被抽象为一套“模板”：</p>
 <blockquote>
-<p>线性层要么按列切，要么按行切；注意力按 head 切；每层前后各几次 all-reduce/all-gather。 不依赖新框架或特殊编译器，完全可以在原生 PyTorch 上实现，对于工程团队来说成本低且可维护。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</p>
+<p>线性层要么按列切，要么按行切；注意力按 head 切；每层前后各几次 all-reduce/all-gather。 不依赖新框架或特殊编译器，完全可以在原生 PyTorch 上实现，对于工程团队来说成本低且可维护。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</p>
 </blockquote></li>
-<li><p><strong>系统性能与任务性能兼顾</strong> 同时给出 FLOPs 利用率、扩展效率和标准 benchmark 上的 SOTA 指标，说明它既是系统优化，又有实质的模型效果提升。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism">arXiv</a>)</p></li>
-<li><p><strong>强调与其他并行方式的“正交可组合”特性</strong> 论文清楚指出层内模型并行可与数据并行、流水并行叠加使用，这一点后来在 3D/4D 并行中被广泛继承。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</p></li>
-<li><p><strong>对 BERT 架构的 LayerNorm 位置给出大规模下的经验结论</strong> 展示了 Pre-LN 对大规模模型稳定性的好处，对后续 Transformer 结构设计有深远影响。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</p></li>
+<li><p><strong>系统性能与任务性能兼顾</strong> 同时给出 FLOPs 利用率、扩展效率和标准 benchmark 上的 SOTA 指标，说明它既是系统优化，又有实质的模型效果提升。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053">arXiv</a>)</p></li>
+<li><p><strong>强调与其他并行方式的“正交可组合”特性</strong> 论文清楚指出层内模型并行可与数据并行、流水并行叠加使用，这一点后来在 3D/4D 并行中被广泛继承。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</p></li>
+<li><p><strong>对 BERT 架构的 LayerNorm 位置给出大规模下的经验结论</strong> 展示了 Pre-LN 对大规模模型稳定性的好处，对后续 Transformer 结构设计有深远影响。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</p></li>
 </ul>
 <h3 id="局限limitations">局限（Limitations）</h3>
 <ul>
-<li><p><strong>对网络拓扑、异构集群等复杂环境的考虑较少</strong> 假定的是高速 NVSwitch + InfiniBand 的“好环境”，简单 TP 切法在弱网络或异构环境下可能表现不佳。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</p></li>
-<li><p><strong>实验主要基于自家硬件栈，泛化到其他平台需要额外工作</strong> 未给出在其他硬件（如 TPU 或不同厂商 GPU）上的验证，对跨生态迁移的读者不够友好。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</p></li>
-<li><p><strong>理论分析偏薄，更多依赖经验和实测</strong> 例如行切/列切组合为什么“好用”，在什么条件下接近最优，缺乏更 formal 的模型和保证； 通信成本和性能边界也主要是通过实测说明，而不是建立统一的分析框架。(<a target="_blank" rel="noopener" href="https://minjiazhang.github.io/courses/sp24-resource/Megatron-LM.pdf?utm_source=chatgpt.com" title="Megatron-LM.pdf - Minjia Zhang">Minjia Zhang</a>)</p></li>
+<li><p><strong>对网络拓扑、异构集群等复杂环境的考虑较少</strong> 假定的是高速 NVSwitch + InfiniBand 的“好环境”，简单 TP 切法在弱网络或异构环境下可能表现不佳。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</p></li>
+<li><p><strong>实验主要基于自家硬件栈，泛化到其他平台需要额外工作</strong> 未给出在其他硬件（如 TPU 或不同厂商 GPU）上的验证，对跨生态迁移的读者不够友好。(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</p></li>
+<li><p><strong>理论分析偏薄，更多依赖经验和实测</strong> 例如行切/列切组合为什么“好用”，在什么条件下接近最优，缺乏更 formal 的模型和保证； 通信成本和性能边界也主要是通过实测说明，而不是建立统一的分析框架。(<a target="_blank" rel="noopener" href="https://minjiazhang.github.io/courses/sp24-resource/Megatron-LM.pdf">Minjia Zhang</a>)</p></li>
 <li><p><strong>对未来复杂模型结构（MoE、稀疏注意力等）的适配未讨论</strong> 可以理解为时代限制，但从今天回看，它主要覆盖 dense Transformer，对后续更复杂架构提供的是启发而非直接方案。</p></li>
 </ul>
 <hr />
 <h2 id="七业内相关工作对比">七、业内相关工作对比</h2>
-<p>这里选几个与你经常接触、且和 Megatron-LM 强相关的工作做简要对比：(<a target="_blank" rel="noopener" href="https://minjiazhang.github.io/courses/sp24-resource/Megatron-LM.pdf?utm_source=chatgpt.com" title="Megatron-LM.pdf - Minjia Zhang">Minjia Zhang</a>)</p>
+<p>这里选几个与你经常接触、且和 Megatron-LM 强相关的工作做简要对比：(<a target="_blank" rel="noopener" href="https://minjiazhang.github.io/courses/sp24-resource/Megatron-LM.pdf">Minjia Zhang</a>)</p>
 <ol type="1">
 <li><p><strong>GPT-2：Language Models are Unsupervised Multitask Learners</strong></p>
 <ul>
@@ -526,7 +526,7 @@
 <li>将网络按层切成不同 stage，通过 micro-batch 流水传递实现流水并行；</li>
 <li>关注的是“深度方向”的并行与显存扩展。</li>
 </ul></li>
-<li><p><strong>后续多维并行工作（如更后来的 Megatron-DeepSpeed、3D/4D 并行框架）</strong>(<a target="_blank" rel="noopener" href="https://dl.acm.org/doi/10.1145/3458817.3476209?utm_source=chatgpt.com" title="Efficient large-scale language model training on GPU ...">ACM Digital Library</a>)</p>
+<li><p><strong>后续多维并行工作（如更后来的 Megatron-DeepSpeed、3D/4D 并行框架）</strong>(<a target="_blank" rel="noopener" href="https://dl.acm.org/doi/10.1145/3458817.3476209">ACM Digital Library</a>)</p>
 <ul>
 <li>在 Megatron TP 的基础上叠加流水并行、ZeRO 等技术，实现 DP+TP+PP 的联合搜索与调度；</li>
 <li>进一步解决 trillion 级模型训练中的通信、内存和调度问题。</li>
@@ -559,7 +559,7 @@
 </ul>
 <hr />
 <h2 id="八在实际训练栈中如何落地">八、在实际训练栈中如何落地？</h2>
-<p>从工程实践的角度，如果要把 Megatron-LM 的思想引入到自己的大规模训练栈（如 Megatron 系列、DeepSpeed、vLLM 或自研框架），大致需要考虑以下几个方面：(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language ...">arXiv</a>)</p>
+<p>从工程实践的角度，如果要把 Megatron-LM 的思想引入到自己的大规模训练栈（如 Megatron 系列、DeepSpeed、vLLM 或自研框架），大致需要考虑以下几个方面：(<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1909.08053">arXiv</a>)</p>
 <h3 id="数据打包与前向通路">1. 数据打包与前向通路</h3>
 <ul>
 <li>保持原有 DataLoader 基本不变，主要要求 embedding 和输出层支持“分片权重 + 全局向量”模式；</li>
@@ -592,12 +592,12 @@
 <h3 id="配置与调参策略">6. 配置与调参策略</h3>
 <ul>
 <li>针对不同模型规模和硬件资源，设计一套 TP size × DP size 的推荐组合（比如 TP=2/4/8，DP 根据 GPU 总数自动推导）；</li>
-<li>配合混合精度、gradient checkpointing、ZeRO 等方法，整体调节显存峰值和吞吐；(<a target="_blank" rel="noopener" href="https://dl.acm.org/doi/10.1145/3458817.3476209?utm_source=chatgpt.com" title="Efficient large-scale language model training on GPU ...">ACM Digital Library</a>)</li>
+<li>配合混合精度、gradient checkpointing、ZeRO 等方法，整体调节显存峰值和吞吐；(<a target="_blank" rel="noopener" href="https://dl.acm.org/doi/10.1145/3458817.3476209">ACM Digital Library</a>)</li>
 <li>对不同模型与数据集，积累经验性的“平衡点”（如“TP=8 + DP=16 比 TP=4 + DP=32 更划算还是相反”）。</li>
 </ul>
 <hr />
 <h2 id="九值得进一步探索的研究方向">九、值得进一步探索的研究方向</h2>
-<p>结合 Megatron-LM 的思路，以及当前大模型训练的发展，可以衍生出多条继续深入的方向：(<a target="_blank" rel="noopener" href="https://dl.acm.org/doi/10.1145/3458817.3476209?utm_source=chatgpt.com" title="Efficient large-scale language model training on GPU ...">ACM Digital Library</a>)</p>
+<p>结合 Megatron-LM 的思路，以及当前大模型训练的发展，可以衍生出多条继续深入的方向：(<a target="_blank" rel="noopener" href="https://dl.acm.org/doi/10.1145/3458817.3476209">ACM Digital Library</a>)</p>
 <h3 id="方向一多维并行的自动规划与调度">方向一：多维并行的自动规划与调度</h3>
 <p>在 TP 之外引入 DP、PP、序列并行、专家并行后，人肉调参成本极高。如何在给定模型结构和集群拓扑的前提下，自动搜索 TP/PP/DP 等多维并行组合，并生成可执行的并行计划，是一个高度工程化又非常有价值的问题。后续的一些工作（如自动混合并行框架）就在尝试解决这类问题。</p>
 <h3 id="方向二拓扑感知的张量并行">方向二：拓扑感知的张量并行</h3>
@@ -629,7 +629,7 @@
 </ul>
 <hr />
 <h2 id="十知识图谱思维链">十、知识图谱思维链</h2>
-<p>从一个偏“大模型系统工程 + 并行训练”的知识图谱视角来看，Megatron-LM 这篇论文主要对以下几个板块有直接补链或补强作用：(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053?utm_source=chatgpt.com" title="Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism">arXiv</a>)</p>
+<p>从一个偏“大模型系统工程 + 并行训练”的知识图谱视角来看，Megatron-LM 这篇论文主要对以下几个板块有直接补链或补强作用：(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/1909.08053">arXiv</a>)</p>
 <ul>
 <li><p><strong>并行与调度</strong></p>
 <ul>
