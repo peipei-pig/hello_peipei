@@ -28,7 +28,7 @@
 <meta property="og:description" content="InstructCoder：面向代码编辑的指令微调实践解析">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2025-11-22T11:35:52.333Z">
-<meta property="article:modified_time" content="2025-11-22T12:21:42.862Z">
+<meta property="article:modified_time" content="2025-11-22T12:25:46.788Z">
 <meta property="article:author" content="PePe">
 <meta property="article:tag" content="paper">
 <meta name="twitter:card" content="summary">
@@ -233,7 +233,7 @@
               <span class="post-meta-item-text">Posted on</span>
               
 
-              <time title="Created: 2025-11-22 19:35:52 / Modified: 20:21:42" itemprop="dateCreated datePublished" datetime="2025-11-22T19:35:52+08:00">2025-11-22</time>
+              <time title="Created: 2025-11-22 19:35:52 / Modified: 20:25:46" itemprop="dateCreated datePublished" datetime="2025-11-22T19:35:52+08:00">2025-11-22</time>
             </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -268,23 +268,23 @@
         <span id="more"></span>
 <hr />
 <h2 id="一论文速览">一、论文速览</h2>
-<p>InstructCoder 关注的是「根据自然语言指令对现有代码进行修改」这一类<strong>代码编辑任务</strong>，而不是从零生成代码。作者发现，即便是 GPT-4 级别的模型，在严格的执行测试下也经常无法正确完成编辑。为此，论文构建了一个新的执行式评测基准 EditEval，并提出专门为代码编辑设计的指令微调数据集 InstructCoder，包含 11 万+ 真实场景风格的代码编辑样本。实验表明：在 LLaMA / BLOOM 等开源模型上使用 LoRA 方式，基于 InstructCoder 进行指令微调后，模型在 EditEval 上的准确率可以从个位数直接提升到几十个百分点，甚至让 Code LLaMA-13B 的表现接近 ChatGPT。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3?utm_source=chatgpt.com" title="Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</p>
+<p>InstructCoder 关注的是「根据自然语言指令对现有代码进行修改」这一类<strong>代码编辑任务</strong>，而不是从零生成代码。作者发现，即便是 GPT-4 级别的模型，在严格的执行测试下也经常无法正确完成编辑。为此，论文构建了一个新的执行式评测基准 EditEval，并提出专门为代码编辑设计的指令微调数据集 InstructCoder，包含 11 万+ 真实场景风格的代码编辑样本。实验表明：在 LLaMA / BLOOM 等开源模型上使用 LoRA 方式，基于 InstructCoder 进行指令微调后，模型在 EditEval 上的准确率可以从个位数直接提升到几十个百分点，甚至让 Code LLaMA-13B 的表现接近 ChatGPT。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</p>
 <h2 id="二论文结构">二、论文结构</h2>
 <ol type="1">
-<li><p><strong>引言与动机</strong> 说明代码编辑与代码补全的差异，指出当前缺乏针对「自然语言指令 + 代码编辑」的系统性数据与评测，给出 InstructCoder 与 EditEval 的整体目标。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3?utm_source=chatgpt.com" title="Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</p></li>
-<li><p><strong>相关工作</strong> 回顾通用 LLM、代码 LLM、指令微调、自指令（Self-Instruct）和已有的代码任务数据集（如 HumanEval、MBPP、PIE 等），对比它们在「是否面向代码编辑」「是否执行评测」等维度上的不足，为本文定位做铺垫。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</p></li>
-<li><p><strong>EditEval：代码编辑评测基准</strong> 介绍 EditEval 的构造方式：从 GitHub commits、MBPP、HumanEval 中抽取代码，对每个样本构造自然语言编辑指令和「编辑后的参考实现」，并配套自动测试用例，用「是否通过所有测试」作为准确率指标。这部分适合希望自己复现评测环境、扩展新模型时重点阅读。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</p></li>
-<li><p><strong>InstructCoder：指令微调数据构建流程</strong> 详细说明从 GitHub commits 抽取 seed 数据、用 ChatGPT 进行自指令扩展、引入「场景条件生成」、以及用 ROUGE-L + MinHash/LSH 做去重和清洗的完整流水线。这部分对做数据工程、想仿照构建自家代码编辑数据的读者非常关键。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</p></li>
-<li><p><strong>数据分析</strong> 从任务多样性（intent / verb）、场景多样性、复杂度（编辑行数与编辑比例）、以及人工质检结果等角度分析 InstructCoder 的数据特性。这一节帮助你判断「这类数据是否适合直接拿来微调」以及「需要不要再额外补充自己的场景」。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</p></li>
-<li><p><strong>实验与结果</strong> 说明使用的基础模型家族（LLaMA / LLaMA-2 / Code LLaMA / BLOOM 等）、LoRA 微调设置、基线模型（ChatGPT、GPT-4、Alpaca、CodeAlpaca 等），并给出在 EditEval 上「微调前/后」的准确率对比、数据规模缩放实验、不同编辑比例下的表现。适合希望看到「投入多少算值得」的工程同学阅读。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</p></li>
-<li><p><strong>结论与局限</strong> 总结 InstructCoder + EditEval 的贡献，并坦陈当前只覆盖 Python 单文件、小规模编辑、不含多文件上下文等局限，为后续扩展指明方向。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</p></li>
+<li><p><strong>引言与动机</strong> 说明代码编辑与代码补全的差异，指出当前缺乏针对「自然语言指令 + 代码编辑」的系统性数据与评测，给出 InstructCoder 与 EditEval 的整体目标。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</p></li>
+<li><p><strong>相关工作</strong> 回顾通用 LLM、代码 LLM、指令微调、自指令（Self-Instruct）和已有的代码任务数据集（如 HumanEval、MBPP、PIE 等），对比它们在「是否面向代码编辑」「是否执行评测」等维度上的不足，为本文定位做铺垫。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</p></li>
+<li><p><strong>EditEval：代码编辑评测基准</strong> 介绍 EditEval 的构造方式：从 GitHub commits、MBPP、HumanEval 中抽取代码，对每个样本构造自然语言编辑指令和「编辑后的参考实现」，并配套自动测试用例，用「是否通过所有测试」作为准确率指标。这部分适合希望自己复现评测环境、扩展新模型时重点阅读。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</p></li>
+<li><p><strong>InstructCoder：指令微调数据构建流程</strong> 详细说明从 GitHub commits 抽取 seed 数据、用 ChatGPT 进行自指令扩展、引入「场景条件生成」、以及用 ROUGE-L + MinHash/LSH 做去重和清洗的完整流水线。这部分对做数据工程、想仿照构建自家代码编辑数据的读者非常关键。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</p></li>
+<li><p><strong>数据分析</strong> 从任务多样性（intent / verb）、场景多样性、复杂度（编辑行数与编辑比例）、以及人工质检结果等角度分析 InstructCoder 的数据特性。这一节帮助你判断「这类数据是否适合直接拿来微调」以及「需要不要再额外补充自己的场景」。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</p></li>
+<li><p><strong>实验与结果</strong> 说明使用的基础模型家族（LLaMA / LLaMA-2 / Code LLaMA / BLOOM 等）、LoRA 微调设置、基线模型（ChatGPT、GPT-4、Alpaca、CodeAlpaca 等），并给出在 EditEval 上「微调前/后」的准确率对比、数据规模缩放实验、不同编辑比例下的表现。适合希望看到「投入多少算值得」的工程同学阅读。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</p></li>
+<li><p><strong>结论与局限</strong> 总结 InstructCoder + EditEval 的贡献，并坦陈当前只覆盖 Python 单文件、小规模编辑、不含多文件上下文等局限，为后续扩展指明方向。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</p></li>
 </ol>
 <blockquote>
-<p>核心思想：针对「自然语言指令驱动的代码编辑」这一实际开发场景，InstructCoder 通过自指令生成 + 场景条件生成构建出高质量指令微调数据，并配套执行式评测基准 EditEval，系统验证了在合适的数据和轻量微调策略下，开源代码模型的代码编辑能力可以被大幅激发，逼近商业闭源模型的水平。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3?utm_source=chatgpt.com" title="Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</p>
+<p>核心思想：针对「自然语言指令驱动的代码编辑」这一实际开发场景，InstructCoder 通过自指令生成 + 场景条件生成构建出高质量指令微调数据，并配套执行式评测基准 EditEval，系统验证了在合适的数据和轻量微调策略下，开源代码模型的代码编辑能力可以被大幅激发，逼近商业闭源模型的水平。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</p>
 </blockquote>
 <hr />
 <h2 id="三方法与系统设计">三、方法与系统设计</h2>
-<p>InstructCoder 的核心思路可以概括为：<strong>先造一个严格、执行驱动的评测基准 EditEval，然后围绕这个评测目标，用自指令方法构建大量高多样性、高复杂度的代码编辑指令数据，用 LoRA 方式对现有代码 LLM 做专门的指令微调</strong>。从工程视角看，它更像是「一个数据与训练流水线设计」，而不是新模型结构。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</p>
+<p>InstructCoder 的核心思路可以概括为：<strong>先造一个严格、执行驱动的评测基准 EditEval，然后围绕这个评测目标，用自指令方法构建大量高多样性、高复杂度的代码编辑指令数据，用 LoRA 方式对现有代码 LLM 做专门的指令微调</strong>。从工程视角看，它更像是「一个数据与训练流水线设计」，而不是新模型结构。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</p>
 <h3 id="要解决的子问题">3.0 要解决的子问题</h3>
 <ul>
 <li>子问题 1：如何构造一个<strong>执行可验证</strong>、覆盖多种代码编辑场景的评测基准，而不是只看 token 级别相似度？</li>
@@ -294,51 +294,99 @@
 </ul>
 <h3 id="核心模块一览">3.1 核心模块一览</h3>
 <ul>
-<li><strong>EditEval 构造模块</strong>：从 GitHub、MBPP、HumanEval 抽取代码片段，人工编写/润色自然语言编辑指令与参考答案，加上自动测试用例，形成执行式评测任务。对应子问题 1。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</li>
-<li><strong>Seed 数据采集模块</strong>：基于 BigQuery 搜集 Python 仓库中的 commit，筛选出单文件、单代码块变更的记录，用 Codex 辅助修正含糊的 commit message，最终得到约 634 条高质量初始编辑样本，再加上一批人工筛选的 ChatGPT 生成样本。对应子问题 2。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</li>
-<li><strong>Self-Instruct 式指令自举模块</strong>：在每一轮自举中，从 seed 与已有生成样本中采样若干指令，通过 few-shot prompt 让 ChatGPT 生成新指令，逐步扩展任务空间。对应子问题 2、3。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</li>
-<li><strong>场景条件代码生成模块</strong>：先让 LLM 生成「真实世界场景」描述，再基于场景 + 指令生成成对的输入/输出代码，使样本在项目结构、变量命名等层面更贴近真实工程。对应子问题 3。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</li>
-<li><strong>去重与质量控制模块</strong>：对指令使用 ROUGE-L 阈值去重，对代码使用 MinHash + LSH 控制 Jaccard 相似度，并通过人工抽样检验指令有效性与输出正确性。对应子问题 3。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</li>
-<li><strong>LoRA 微调模块</strong>：在 LLaMA / LLaMA-2 / Code LLaMA / BLOOM 等基础模型上，仅在 Q/K/V/O 等线性层上插入 LoRA 低秩矩阵，以较低显存成本完成指令微调。对应子问题 4。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</li>
+<li><strong>EditEval 构造模块</strong>：从 GitHub、MBPP、HumanEval 抽取代码片段，人工编写/润色自然语言编辑指令与参考答案，加上自动测试用例，形成执行式评测任务。对应子问题 1。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
+<li><strong>Seed 数据采集模块</strong>：基于 BigQuery 搜集 Python 仓库中的 commit，筛选出单文件、单代码块变更的记录，用 Codex 辅助修正含糊的 commit message，最终得到约 634 条高质量初始编辑样本，再加上一批人工筛选的 ChatGPT 生成样本。对应子问题 2。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
+<li><strong>Self-Instruct 式指令自举模块</strong>：在每一轮自举中，从 seed 与已有生成样本中采样若干指令，通过 few-shot prompt 让 ChatGPT 生成新指令，逐步扩展任务空间。对应子问题 2、3。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
+<li><strong>场景条件代码生成模块</strong>：先让 LLM 生成「真实世界场景」描述，再基于场景 + 指令生成成对的输入/输出代码，使样本在项目结构、变量命名等层面更贴近真实工程。对应子问题 3。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
+<li><strong>去重与质量控制模块</strong>：对指令使用 ROUGE-L 阈值去重，对代码使用 MinHash + LSH 控制 Jaccard 相似度，并通过人工抽样检验指令有效性与输出正确性。对应子问题 3。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
+<li><strong>LoRA 微调模块</strong>：在 LLaMA / LLaMA-2 / Code LLaMA / BLOOM 等基础模型上，仅在 Q/K/V/O 等线性层上插入 LoRA 低秩矩阵，以较低显存成本完成指令微调。对应子问题 4。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
 </ul>
 <h3 id="数据流与控制流">3.2 数据流与控制流</h3>
 <p>按照「数据 → 任务 → 训练 → 评测」视角，可以把整个流程拆成以下步骤：</p>
 <ol type="1">
-<li><p><strong>原始代码数据收集</strong></p>
-<p>1.1 使用 BigQuery 抽取满足「Python、星标数≥100、开源许可」约束的仓库提交记录。 1.2 使用 <code>git diff</code> 检测单文件、单代码块的修改，过滤掉巨大或跨多文件的 commits。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</p></li>
-<li><p><strong>Seed 样本构建</strong></p>
-<p>2.1 对于语义不清的 commit message，用 Codex 自动生成更精确的描述，然后人工修订。 2.2 将「commit message → 编辑前代码 → 编辑后代码」统一转换为「自然语言指令 → 输入代码 → 输出代码」形式。 2.3 额外让 ChatGPT 生成一批高质量编辑样本，经人工筛选后加入 seed 集。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</p></li>
-<li><p><strong>自指令扩展</strong></p>
-<p>3.1 在每次迭代中，随机抽取若干 seed 指令与部分已有生成指令，构造成 few-shot 提示。 3.2 用 ChatGPT 生成新的代码编辑指令，覆盖多种编辑意图（添加功能、性能优化、重构、增加注释等）。 3.3 把新指令加入候选指令池。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</p></li>
-<li><p><strong>场景条件样本生成</strong></p>
-<p>4.1 对每条指令，让 LLM 先生成若干「场景描述」（例如：web 后端服务、图像处理脚本、安全扫描工具等）。 4.2 随机选择一个场景，再 prompt LLM 根据「场景 + 指令」生成输入/输出代码对。 4.3 对生成样本做基本合法性检查（能否解析、是否包含核心改动）。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</p></li>
-<li><p><strong>去重与质量控制</strong></p>
-<p>5.1 对指令文本：计算 ROUGE-L，相似度超过 0.7 的样本只保留一个。 5.2 对代码：使用 MinHash + LSH 做近重复检查，Jaccard 相似度超过 0.75 的样本去重。 5.3 随机抽样 200 条数据，让人工评估「指令是否清晰」与「输出是否符合指令」，保证数据整体可靠性。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</p></li>
-<li><p><strong>数据划分与训练准备</strong></p>
-<p>6.1 将最终约 11.4 万条样本按 95%/5% 划分为训练集/验证集。 6.2 统一格式为「自然语言指令 + 输入代码」作为上下文，「输出代码」作为模型需要预测的目标序列。</p></li>
-<li><p><strong>LoRA 指令微调</strong></p>
-<p>7.1 在选定的基础模型（如 Code LLaMA-13B）上，为 Q/K/V/O 等层插入 LoRA 低秩矩阵，只训练新增参数。 7.2 使用标准自回归损失，对输出代码 tokens 计算交叉熵，训练直到在验证集上收敛。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</p></li>
-<li><p><strong>EditEval 评测</strong></p>
-<p>8.1 对每个 EditEval 任务，把「指令 + 输入代码」给到模型，让其生成候选输出代码。 8.2 将候选代码与参考实现一起编译/执行，使用预先编写的单元测试判断是否正确。 8.3 统计所有任务上通过率，得到 accuracy 指标。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</p></li>
-<li><p><strong>扩展实验与分析</strong></p>
-<p>9.1 做「训练集规模缩放」实验（1% / 10% / 100%）观察性能与数据量的关系。 9.2 按编辑比例分桶，用 GPT-4 对编辑质量打分，看「改动多少行」与模型难度的关系。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</p></li>
+<li><strong>原始代码数据收集</strong></li>
 </ol>
+<ul>
+<li>1.1 使用 BigQuery 抽取满足「Python、星标数≥100、开源许可」约束的仓库提交记录。</li>
+<li>1.2 使用 <code>git diff</code> 检测单文件、单代码块的修改，过滤掉巨大或跨多文件的 commits。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
+</ul>
+<ol start="2" type="1">
+<li><strong>Seed 样本构建</strong></li>
+</ol>
+<ul>
+<li>2.1 对于语义不清的 commit message，用 Codex 自动生成更精确的描述，然后人工修订。</li>
+<li>2.2 将「commit message → 编辑前代码 → 编辑后代码」统一转换为「自然语言指令 → 输入代码 → 输出代码」形式。</li>
+<li>2.3 额外让 ChatGPT 生成一批高质量编辑样本，经人工筛选后加入 seed 集。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
+</ul>
+<ol start="3" type="1">
+<li><strong>自指令扩展</strong></li>
+</ol>
+<ul>
+<li>3.1 在每次迭代中，随机抽取若干 seed 指令与部分已有生成指令，构造成 few-shot 提示。</li>
+<li>3.2 用 ChatGPT 生成新的代码编辑指令，覆盖多种编辑意图（添加功能、性能优化、重构、增加注释等）。</li>
+<li>3.3 把新指令加入候选指令池。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
+</ul>
+<ol start="4" type="1">
+<li><strong>场景条件样本生成</strong></li>
+</ol>
+<ul>
+<li>4.1 对每条指令，让 LLM 先生成若干「场景描述」（例如：web 后端服务、图像处理脚本、安全扫描工具等）。</li>
+<li>4.2 随机选择一个场景，再 prompt LLM 根据「场景 + 指令」生成输入/输出代码对。</li>
+<li>4.3 对生成样本做基本合法性检查（能否解析、是否包含核心改动）。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
+</ul>
+<ol start="5" type="1">
+<li><strong>去重与质量控制</strong></li>
+</ol>
+<ul>
+<li>5.1 对指令文本：计算 ROUGE-L，相似度超过 0.7 的样本只保留一个。</li>
+<li>5.2 对代码：使用 MinHash + LSH 做近重复检查，Jaccard 相似度超过 0.75 的样本去重。</li>
+<li>5.3 随机抽样 200 条数据，让人工评估「指令是否清晰」与「输出是否符合指令」，保证数据整体可靠性。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
+</ul>
+<ol start="6" type="1">
+<li><strong>数据划分与训练准备</strong></li>
+</ol>
+<ul>
+<li>6.1 将最终约 11.4 万条样本按 95%/5% 划分为训练集/验证集。</li>
+<li>6.2 统一格式为「自然语言指令 + 输入代码」作为上下文，「输出代码」作为模型需要预测的目标序列。</li>
+</ul>
+<ol start="7" type="1">
+<li><strong>LoRA 指令微调</strong></li>
+</ol>
+<ul>
+<li>7.1 在选定的基础模型（如 Code LLaMA-13B）上，为 Q/K/V/O 等层插入 LoRA 低秩矩阵，只训练新增参数。</li>
+<li>7.2 使用标准自回归损失，对输出代码 tokens 计算交叉熵，训练直到在验证集上收敛。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
+</ul>
+<ol start="8" type="1">
+<li><strong>EditEval 评测</strong></li>
+</ol>
+<ul>
+<li>8.1 对每个 EditEval 任务，把「指令 + 输入代码」给到模型，让其生成候选输出代码。</li>
+<li>8.2 将候选代码与参考实现一起编译/执行，使用预先编写的单元测试判断是否正确。</li>
+<li>8.3 统计所有任务上通过率，得到 accuracy 指标。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
+</ul>
+<ol start="9" type="1">
+<li><strong>扩展实验与分析</strong></li>
+</ol>
+<ul>
+<li>9.1 做「训练集规模缩放」实验（1% / 10% / 100%）观察性能与数据量的关系。</li>
+<li>9.2 按编辑比例分桶，用 GPT-4 对编辑质量打分，看「改动多少行」与模型难度的关系。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
+</ul>
 <h3 id="关键假设与适用范围">3.3 关键假设与适用范围</h3>
 <ol type="1">
 <li><p><strong>单文件、单代码块上下文足以覆盖主要编辑需求</strong></p>
 <ul>
 <li>假设：很多有代表性的代码编辑任务（增加注释、重构函数、优化逻辑）可以在单文件、单片段上下文中完成。</li>
-<li>可能失效的场景：涉及跨模块重构、公共库 API 迁移、大型重构（例如「把项目的同步 IO 换成 async」）时，单文件视角不够，模型可能在全局一致性上出错。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</li>
+<li>可能失效的场景：涉及跨模块重构、公共库 API 迁移、大型重构（例如「把项目的同步 IO 换成 async」）时，单文件视角不够，模型可能在全局一致性上出错。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
 </ul></li>
 <li><p><strong>Python 语言具有代表性，可迁移到其他语言</strong></p>
 <ul>
 <li>假设：以 Python 为主构建编辑数据，依然能给模型提供通用的「编辑能力模式」，之后可以迁移到其他语言。</li>
-<li>可能失效的场景：强类型语言（C++/Rust/Java）中，类型系统与构建系统约束更强，「只改一处」可能在编译期就挂，迁移效果不一定好，需要结合语言特性进一步微调。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</li>
+<li>可能失效的场景：强类型语言（C++/Rust/Java）中，类型系统与构建系统约束更强，「只改一处」可能在编译期就挂，迁移效果不一定好，需要结合语言特性进一步微调。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
 </ul></li>
 <li><p><strong>自指令生成 + 大模型合成数据的质量足够高</strong></p>
 <ul>
 <li>假设：在有 seed 数据约束的前提下，让 ChatGPT 这类模型扩写指令与样本，可以获得分布与真实开发相近的数据。</li>
-<li>可能失效的场景：如果目标场景中有大量领域特定框架（金融风控 DSL、内部服务框架等）或复杂非功能约束（性能 SLA、安全合规），缺乏真实项目代码，会出现 domain gap，微调后模型在真实库上的表现可能大幅下降。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</li>
+<li>可能失效的场景：如果目标场景中有大量领域特定框架（金融风控 DSL、内部服务框架等）或复杂非功能约束（性能 SLA、安全合规），缺乏真实项目代码，会出现 domain gap，微调后模型在真实库上的表现可能大幅下降。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
 </ul></li>
 <li><p><strong>LoRA 足以学习代码编辑能力，而不破坏基础模型的通用能力</strong></p>
 <ul>
@@ -355,7 +403,7 @@
 <p>这篇工作整体上是一个偏<strong>系统与数据工程</strong>的设计，并没有复杂的优化算法或新目标函数。方法部分的数学符号主要出现在数据分析中，用于定义：</p>
 <ul>
 <li><strong>不同的行数（differing lines）</strong>：基于 <code>difflib</code> 对输入/输出代码做行级 diff，统计发生变化的行数。</li>
-<li><strong>编辑比例（edit ratio）</strong>：用「发生变化的行数」相对整个代码长度的比值，衡量一次编辑的规模大小。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</li>
+<li><strong>编辑比例（edit ratio）</strong>：用「发生变化的行数」相对整个代码长度的比值，衡量一次编辑的规模大小。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
 </ul>
 <p>作者并未在正文中给出复杂推导，只是用这些指标做统计分析，因此这里不再强行写出公式细节；从工程角度理解为：</p>
 <blockquote>
@@ -376,7 +424,7 @@
 <h3 id="问题是如何形式化的">4.1 问题是如何形式化的？</h3>
 <p>论文把代码编辑任务形式化为一个条件生成问题：给定自然语言指令 (I) 和现有代码片段 (C_{})，模型需要生成修改后的代码 (C_{})。优化目标就是最大化在 InstructCoder 数据集上的条件对数似然：</p>
 <p>[ <em>P</em>(C_{} I, C_{})]</p>
-<p>实现上使用标准自回归语言模型，训练时把「指令 + 输入代码」拼在一起作为上下文，让模型只在「输出代码」部分累积 loss。微调策略采用 LoRA，在 Transformer 的部分线性层上插入低秩矩阵，仅更新这些新增参数，以显著降低显存和训练成本。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</p>
+<p>实现上使用标准自回归语言模型，训练时把「指令 + 输入代码」拼在一起作为上下文，让模型只在「输出代码」部分累积 loss。微调策略采用 LoRA，在 Transformer 的部分线性层上插入低秩矩阵，仅更新这些新增参数，以显著降低显存和训练成本。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</p>
 <p>建模时的简化包括：</p>
 <ul>
 <li>不显式建模「编辑操作序列」（如插入/删除/替换），而是直接在 token 序列空间生成完整的 <code>C_after</code>；</li>
@@ -384,7 +432,7 @@
 <li>不对执行结果显式建模（例如 RL from execution），而是用执行测试只作为评估，不进入训练闭环。</li>
 </ul>
 <h3 id="核心评估指标">4.2 核心评估指标</h3>
-<p>论文用到的关键指标包括：(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</p>
+<p>论文用到的关键指标包括：(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</p>
 <ol type="1">
 <li><p><strong>执行准确率（EditEval Accuracy）</strong></p>
 <ul>
@@ -415,33 +463,33 @@
 <hr />
 <h2 id="五主要实验发现">五、主要实验发现</h2>
 <ul>
-<li><strong>当前通用指令模型在代码编辑上远未「解决问题」</strong>：在 EditEval 上，GPT-4 的准确率约 68.6%，ChatGPT 约 57.7%，而许多开源指令模型（Alpaca / LLaMA+CodeAlpaca）在 7B / 13B 规模时甚至低于 20%。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</li>
-<li><strong>InstructCoder 微调带来显著收益</strong>：在 BLOOM、LLaMA、LLaMA-2、Code LLaMA 等基础模型上，使用 InstructCoder + LoRA 微调后，EditEval 准确率从个位数直接提升到 20%–50% 区间，增益幅度常常在 20–35 个百分点。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</li>
-<li><strong>代码预训练的重要性非常突出</strong>：同样是微调，Code LLaMA 系列整体显著优于 BLOOM / LLaMA-1 / LLaMA-2；Code LLaMA-13B + InstructCoder 的表现达到 57.2%，已经非常接近 ChatGPT。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</li>
+<li><strong>当前通用指令模型在代码编辑上远未「解决问题」</strong>：在 EditEval 上，GPT-4 的准确率约 68.6%，ChatGPT 约 57.7%，而许多开源指令模型（Alpaca / LLaMA+CodeAlpaca）在 7B / 13B 规模时甚至低于 20%。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
+<li><strong>InstructCoder 微调带来显著收益</strong>：在 BLOOM、LLaMA、LLaMA-2、Code LLaMA 等基础模型上，使用 InstructCoder + LoRA 微调后，EditEval 准确率从个位数直接提升到 20%–50% 区间，增益幅度常常在 20–35 个百分点。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
+<li><strong>代码预训练的重要性非常突出</strong>：同样是微调，Code LLaMA 系列整体显著优于 BLOOM / LLaMA-1 / LLaMA-2；Code LLaMA-13B + InstructCoder 的表现达到 57.2%，已经非常接近 ChatGPT。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
 <li><strong>数据规模越大，收益近似随 log(样本数) 线性增长</strong>：在只用 1% 数据微调时，模型就能明显超出零样本表现；增加到 10%、100% 时，准确率持续提升，呈现平滑的 scaling 曲线。</li>
-<li><strong>小改动场景反而更难</strong>：在 GPT-4 辅助的质量评估中，编辑比例越小，模型越容易偷懒直接复制输入，导致「该改不改」的问题；大模型在这一点上比小模型更鲁棒。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</li>
+<li><strong>小改动场景反而更难</strong>：在 GPT-4 辅助的质量评估中，编辑比例越小，模型越容易偷懒直接复制输入，导致「该改不改」的问题；大模型在这一点上比小模型更鲁棒。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
 </ul>
 <h3 id="关键图表解读">5.1 关键图表解读</h3>
 <ol type="1">
 <li><p><strong>EditEval 基线结果表（类似 Table 1）</strong></p>
 <ul>
 <li>现象：GPT-4 &gt; GPT-4 Turbo &gt; ChatGPT，显著优于一众开源指令模型；开源模型中，规模越大表现越好，但整体仍然偏低。</li>
-<li>支撑主张：说明「代码编辑」对指令理解 + 代码语义理解的要求很高，现有开源指令模型尚未针对这类任务优化，存在巨大提升空间。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</li>
+<li>支撑主张：说明「代码编辑」对指令理解 + 代码语义理解的要求很高，现有开源指令模型尚未针对这类任务优化，存在巨大提升空间。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
 </ul></li>
 <li><p><strong>InstructCoder 微调前后对比表（类似 Table 3）</strong></p>
 <ul>
 <li>现象：例如 Code LLaMA-13B 从 28.9% 提升到 57.2%，BLOOM-7B 从 1.0% 提升到 19.6%，LLaMA-33B 也有 30%+ 的绝对增益。</li>
-<li>支撑主张：证明专门的指令微调数据对于代码编辑能力至关重要，而且跨模型家族通用，只要基础模型有一定代码预训练。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</li>
+<li>支撑主张：证明专门的指令微调数据对于代码编辑能力至关重要，而且跨模型家族通用，只要基础模型有一定代码预训练。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
 </ul></li>
 <li><p><strong>数据规模缩放图（类似 Figure 5）</strong></p>
 <ul>
 <li>现象：1% 数据就能带来立竿见影的收益，10% → 100% 依然有稳定提升，且在 log 轴上近似线性。</li>
-<li>支撑主张：只要样本质量高，适量的数据就能显著改善代码编辑能力，而且继续扩增数据仍然有收益，为后续「更大规模代码编辑指令语料」提供正向信号。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</li>
+<li>支撑主张：只要样本质量高，适量的数据就能显著改善代码编辑能力，而且继续扩增数据仍然有收益，为后续「更大规模代码编辑指令语料」提供正向信号。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
 </ul></li>
 <li><p><strong>按编辑比例分桶的表现图（类似 Figure 6）</strong></p>
 <ul>
 <li>现象：编辑比例很低时准确率显著下降；编辑比例中高时更容易获得高分。</li>
-<li>支撑主张：单纯优化「整体正确率」可能掩盖「小改动」上的困难，需要在数据构造和损失设计上更有针对性（比如增加「只改一两行」的高权重样本）。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</li>
+<li>支撑主张：单纯优化「整体正确率」可能掩盖「小改动」上的困难，需要在数据构造和损失设计上更有针对性（比如增加「只改一两行」的高权重样本）。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
 </ul></li>
 </ol>
 <p><strong>结果解读与边界</strong></p>
@@ -457,8 +505,8 @@
 <p><strong>亮点（Strengths）</strong></p>
 <ul>
 <li><strong>问题定义清晰且贴近实用</strong>：专注于「自然语言指令驱动的代码编辑」这一实际开发中高频但长期被忽视的任务。</li>
-<li><strong>评测设计扎实</strong>：EditEval 采用执行测试作为主指标，避免了仅凭文本相似度评估代码质量的偏差。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</li>
-<li><strong>数据构建管线可复用</strong>：结合 GitHub commit、Self-Instruct、场景条件生成和多重去重策略，给出了一个较为完整的「高质量代码编辑指令数据」构建模板。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</li>
+<li><strong>评测设计扎实</strong>：EditEval 采用执行测试作为主指标，避免了仅凭文本相似度评估代码质量的偏差。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
+<li><strong>数据构建管线可复用</strong>：结合 GitHub commit、Self-Instruct、场景条件生成和多重去重策略，给出了一个较为完整的「高质量代码编辑指令数据」构建模板。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
 <li><strong>实验结果有明确工程含义</strong>：展示了不同基础模型家族、不同规模、不同数据量下的表现差异，为实际选择 base model 和数据规模提供参考。</li>
 <li><strong>关注 error pattern</strong>：通过 edit ratio 视角分析模型行为，发现小改动场景更容易出错，这对后续改进损失函数和数据采样策略很有指导意义。</li>
 </ul>
@@ -466,13 +514,13 @@
 <ul>
 <li><strong>语言与场景覆盖有限</strong>：当前主要聚焦 Python 单语言，且多为单文件、小规模编辑；对多语言、多模块重构的适用性仍待验证。</li>
 <li><strong>对真实工业代码库的贴合度有限</strong>：虽然使用了 GitHub 星标仓库，但仍然是抽离后的片段，与大型 monorepo、复杂依赖树项目存在差距。</li>
-<li><strong>合成数据占比高</strong>：大量样本由 ChatGPT 等模型生成，即便经过去重和人工抽样质检，也难以完全避免「模型自我强化」的风险。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</li>
+<li><strong>合成数据占比高</strong>：大量样本由 ChatGPT 等模型生成，即便经过去重和人工抽样质检，也难以完全避免「模型自我强化」的风险。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
 <li><strong>评测维度单一</strong>：主要看执行正确性和少量人类打分，对代码可读性、性能、风格一致性等指标缺乏系统评估。</li>
 <li><strong>训练策略相对简单</strong>：使用标准自回归 + LoRA 微调，没有引入 RL from execution、编辑操作空间建模等更加针对性的优化方式，有进一步挖掘空间。</li>
 </ul>
 <hr />
 <h2 id="七业内相关工作对比">七、业内相关工作对比</h2>
-<p>这里选三篇与「代码指令数据 / 代码编辑」密切相关的工作做对比：OctoPack、Magicoder、CANITEDIT（EDITCODER）。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2308.07124?utm_source=chatgpt.com" title="OctoPack: Instruction Tuning Code Large Language Models">arXiv</a>)</p>
+<p>这里选三篇与「代码指令数据 / 代码编辑」密切相关的工作做对比：OctoPack、Magicoder、CANITEDIT（EDITCODER）。(<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2308.07124">arXiv</a>)</p>
 <table>
 <colgroup>
 <col style="width: 12%" />
@@ -499,19 +547,19 @@
 <td><strong>OctoPack</strong></td>
 <td>广义代码指令任务，包括修复、解释、生成等</td>
 <td>利用 Git commits 构建大规模 CommitPack，训练 OctoCoder 系列，着重提升 HumanEvalPack 等多任务表现</td>
-<td>面向「通用代码助手」，更强调多语言、多任务覆盖，对编辑任务的专门分析相对较少 (<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2308.07124?utm_source=chatgpt.com" title="OctoPack: Instruction Tuning Code Large Language Models">arXiv</a>)</td>
+<td>面向「通用代码助手」，更强调多语言、多任务覆盖，对编辑任务的专门分析相对较少 (<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2308.07124">arXiv</a>)</td>
 </tr>
 <tr class="odd">
 <td><strong>Magicoder</strong></td>
 <td>面向代码生成的高质量指令数据 OSS-Instruct</td>
 <td>利用开源代码片段构造多样化指令数据，训练 Magicoder 系列，在代码生成 benchmark 上接近或超越 ChatGPT</td>
-<td>更多是在「生成」而非「编辑」维度上 push SOTA，数据构造思想（利用 OSS 片段）对编辑场景也有借鉴意义 (<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2312.02120?utm_source=chatgpt.com" title="Magicoder: Empowering Code Generation with OSS-Instruct">arXiv</a>)</td>
+<td>更多是在「生成」而非「编辑」维度上 push SOTA，数据构造思想（利用 OSS 片段）对编辑场景也有借鉴意义 (<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2312.02120">arXiv</a>)</td>
 </tr>
 <tr class="even">
 <td><strong>CANITEDIT / EDITCODER</strong></td>
 <td>系统化评估与提升代码编辑能力</td>
 <td>构建专门的代码编辑数据集和新的指标（如 ExcessCode），并在 DeepSeekCoder 等模型上进行系统评估与微调</td>
-<td>更关注「如何衡量和优化编辑质量」本身，与 InstructCoder 在问题定义上高度互补，可联合使用 (<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2312.12450?utm_source=chatgpt.com" title="arXiv:2312.12450v6 [cs.SE] 23 Sep 2024">arXiv</a>)</td>
+<td>更关注「如何衡量和优化编辑质量」本身，与 InstructCoder 在问题定义上高度互补，可联合使用 (<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2312.12450">arXiv</a>)</td>
 </tr>
 </tbody>
 </table>
@@ -657,7 +705,7 @@
 </ul></li>
 <li><p><strong>内存管理与显存优化</strong></p>
 <ul>
-<li>LoRA 的采用本身就是一种「参数与显存管理」策略：在 33B 模型上用单卡 A100 完成微调，为在资源受限环境下做专项能力训练提供了例子。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3" title="InstructCoder: Instruction Tuning Large Language Models for Code Editing">arXiv</a>)</li>
+<li>LoRA 的采用本身就是一种「参数与显存管理」策略：在 33B 模型上用单卡 A100 完成微调，为在资源受限环境下做专项能力训练提供了例子。(<a target="_blank" rel="noopener" href="https://arxiv.org/html/2310.20329v3">arXiv</a>)</li>
 </ul></li>
 <li><p><strong>通信与集体操作</strong></p>
 <ul>
