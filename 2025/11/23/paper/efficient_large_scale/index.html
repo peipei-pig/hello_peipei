@@ -28,7 +28,7 @@
 <meta property="og:description" content="Megatron-LM 三维并行实践解析">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2025-11-23T03:46:23.981Z">
-<meta property="article:modified_time" content="2025-11-23T06:28:21.874Z">
+<meta property="article:modified_time" content="2025-11-23T06:29:45.153Z">
 <meta property="article:author" content="PePe">
 <meta property="article:tag" content="paper">
 <meta name="twitter:card" content="summary">
@@ -233,7 +233,7 @@
               <span class="post-meta-item-text">Posted on</span>
               
 
-              <time title="Created: 2025-11-23 11:46:23 / Modified: 14:28:21" itemprop="dateCreated datePublished" datetime="2025-11-23T11:46:23+08:00">2025-11-23</time>
+              <time title="Created: 2025-11-23 11:46:23 / Modified: 14:29:45" itemprop="dateCreated datePublished" datetime="2025-11-23T11:46:23+08:00">2025-11-23</time>
             </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -268,7 +268,6 @@
         <span id="more"></span>
 <hr />
 <!-- toc -->
-<hr />
 <h2 id="一论文速览">一、论文速览</h2>
 <p>这篇 SC’21 论文聚焦的核心问题是：在上千块 GPU 的集群上，如何高效训练 100B～1T 级别的 Transformer 语言模型，同时既不被显存限制卡死，又不过度浪费算力在通信和流水空泡上。(<a target="_blank" rel="noopener" href="https://people.eecs.berkeley.edu/~matei/papers/2021/sc_megatron_lm.pdf">people.eecs.berkeley.edu</a>)</p>
 <p>作者提出了一套组合式并行方案 PTD-P：在单机内做张量并行（Tensor MP），跨机做流水线并行（Pipeline MP），最外层叠加数据并行（DP），并配套新的 interleaved 1F1B 流水调度以压缩 pipeline bubble。(<a target="_blank" rel="noopener" href="https://people.eecs.berkeley.edu/~matei/papers/2021/sc_megatron_lm.pdf">people.eecs.berkeley.edu</a>)</p>
