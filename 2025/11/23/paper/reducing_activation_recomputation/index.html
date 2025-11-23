@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 7.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yaopepe.com","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"post","display":"post","padding":18,"offset":12,"onmobile":false,"width_dual_column":240},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":true,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.json"};
+  </script>
+
+  <meta name="description" content="大规模 Transformer 激活重计算的系统级优化">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Reducing Activation Recomputation in Large Transformer Models">
+<meta property="og:url" content="https://yaopepe.com/2025/11/23/paper/reducing_activation_recomputation/index.html">
+<meta property="og:site_name" content="果冻甜甜的">
+<meta property="og:description" content="大规模 Transformer 激活重计算的系统级优化">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2025-11-23T06:53:36.260Z">
+<meta property="article:modified_time" content="2025-11-23T06:55:06.543Z">
+<meta property="article:author" content="PePe">
+<meta property="article:tag" content="paper">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://yaopepe.com/2025/11/23/paper/reducing_activation_recomputation/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+
+  <title>Reducing Activation Recomputation in Large Transformer Models | 果冻甜甜的</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">果冻甜甜的</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-首页">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-分类">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-标签">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-归档">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-关于">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+<div class="site-meta-counts" style="font-size:.9em;opacity:.85;margin-top:.25rem;display:flex;gap:.75rem;flex-wrap:wrap">
+  <span class="post-meta-item">
+    <i class="fa fa-eye"></i>
+    <span class="post-meta-item-text">总访问量</span>
+    <span id="vercount_value_site_pv">0</span>
+  </span>
+
+  <span class="post-meta-item">
+    <i class="fa fa-file"></i>
+    <span class="post-meta-item-text">总文章数</span>
+    <span id="total_posts_count">14</span>
+  </span>
+</div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="https://yaopepe.com/2025/11/23/paper/reducing_activation_recomputation/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="PePe">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="果冻甜甜的">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Reducing Activation Recomputation in Large Transformer Models
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2025-11-23 14:53:36 / Modified: 14:55:06" itemprop="dateCreated datePublished" datetime="2025-11-23T14:53:36+08:00">2025-11-23</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AE%BA%E6%96%87%E9%98%85%E8%AF%BB/" itemprop="url" rel="index"><span itemprop="name">论文阅读</span></a>
+                </span>
+            </span>
+
+          
+
+<span class="post-meta-item">
+  <span class="post-meta-item-icon"><i class="fa fa-eye"></i></span>
+  <span class="post-meta-item-text">Views:</span>
+  <span id="vercount_value_page_pv">0</span>  
+</span>
+
+
+            <div class="post-description">大规模 Transformer 激活重计算的系统级优化</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <span id="more"></span>
+<hr />
+<h2 id="一论文速览">一、论文速览</h2>
+<p>这篇论文关注的是：<strong>大规模 Transformer 训练中，激活（activation）显存占用过大，不得不依赖「全层激活重计算」导致训练效率大幅下降</strong>的问题。作者基于对 Transformer 激活内存的精确建模，提出两项看起来很“小”、但效果极强的系统优化：<strong>序列并行（sequence parallelism）</strong>和<strong>选择性激活重计算（selective activation recomputation）</strong>，并与张量并行（tensor parallelism）结合使用。结果是在不改变模型结构的前提下，实现了对激活显存约 <strong>5×</strong> 的压缩，同时将激活重计算带来的时间开销从 30–40% 降到个位数，使 530B 规模 GPT-3 风格模型的 MFU 提升到 <strong>54.2%</strong>、端到端迭代时间提升约 <strong>30%</strong>。</p>
+<h2 id="二论文结构">二、论文结构</h2>
+<ol type="1">
+<li><strong>第 2 节 Related Work</strong>：回顾 ZeRO、Offload、已有的张量并行与序列并行工作，说明这些方法要么对计算/通信开销较大，要么对参数/优化器做了不现实的复制，铺垫本文只专注于「在既有 3D 并行框架内优化激活内存」的定位。</li>
+<li><strong>第 3 节 Transformer Architecture</strong>：固定讨论范围到单塔（single stack）的 encoder/decoder Transformer，定义符号（序列长度 <span class="math inline">\(s\)</span>、隐层维度 <span class="math inline">\(h\)</span>、注意力头数 <span class="math inline">\(a\)</span>、张量并行大小 <span class="math inline">\(t\)</span> 等），方便后面做内存建模。</li>
+<li><strong>第 4 节 Activation Memory</strong>：这是全文的理论核心。先推导「不做任何并行时，每层需要多少激活内存」，再依次引入张量并行、序列并行和流水并行，对公式做修正，最终得到一套可用于配置搜索（TP/PP/MB）的内存模型。</li>
+<li><strong>第 5 节 Selective Activation Recomputation</strong>：在有了内存模型后，讨论什么时候「不得不」做激活重计算，并提出只对注意力中某些 FLOPs/byte 比很低的部分做 checkpoint 的策略，使重计算成本最小化。</li>
+<li><strong>第 6 节 Evaluations</strong>：在 22B/175B/530B/1T 四种配置下，系统地测量每层前后向时间、重计算开销、激活内存占用、迭代时间和 MFU/HFU，展示两个技术单独与组合使用的收益。</li>
+<li><strong>第 7 节 Conclusions &amp; Future Work</strong>：总结两个技术给出的「几乎不需要重计算就能训练超大模型」的结论，并提出后续还可以在内存碎片、流水首层负载等方向继续优化。</li>
+</ol>
+<blockquote>
+<p>核心思想：在精确刻画 Transformer 激活内存构成的基础上，通过「沿序列维度切分非计算瓶颈模块」与「只对低 FLOPs/byte 区域做局部重计算」，在不增加通信带宽压力的前提下，用极少的工程改动，大幅削减激活内存和重计算开销。</p>
+</blockquote>
+<hr />
+<h2 id="三方法与系统设计">三、方法与系统设计</h2>
+<p>作者的整体思路是：<strong>先搞清楚一层 Transformer 到底在哪些地方“花”掉了激活内存，然后对症下药，只在真正必要的地方重算</strong>。这里有两个关键问题：</p>
+<ul>
+<li>怎样<strong>精确量化</strong>「每层激活内存需求」在不同并行策略下的变化？</li>
+<li>怎样在<strong>不增加通信带宽</strong>的前提下，把那些「算得很快但占很多内存」的模块做成可重算的、可切分的形式？</li>
+</ul>
+<p>为此，论文显式拆解了几个子问题：</p>
+<ul>
+<li>子问题 1：给定 <span class="math inline">\((s, b, h, a, L)\)</span> 等超参，<strong>单层激活内存的解析表达式是什么</strong>？</li>
+<li>子问题 2：在已有张量并行的前提下，<strong>哪些激活被无谓地在多个 rank 上复制</strong>，能否沿序列维度再切一刀？</li>
+<li>子问题 3：在必须重计算的场景下，<strong>哪些算子最适合被“牺牲”去重算</strong>（FLOPs/byte 最低）？</li>
+<li>子问题 4：在 3D 并行（TP/PP/DP）调度下，如何根据上述模型做一个可落地的<strong>配置选择策略</strong>，而不是靠拍脑袋或暴力试错？</li>
+</ul>
+<h3 id="核心模块一览">3.1 核心模块一览</h3>
+<p>下面按工程视角，把论文方法拆成几个模块：</p>
+<ul>
+<li><strong>激活内存解析模型（Activation Memory Model）</strong>：推导无并行、张量并行、张量+序列并行、叠加流水并行时，每层以及整条流水线首 stage 需要的激活内存。</li>
+<li><strong>张量并行基线（Tensor Parallel Baseline）</strong>：采用 Megatron 风格的列/行切分 attention 与 MLP，给出在 <span class="math inline">\(t\)</span> 路张量并行下激活内存的缩放关系。</li>
+<li><strong>序列并行算子设计（Sequence Parallel Operators）</strong>：识别出 LayerNorm 与 Dropout 这类「算得很快、却在各 TP rank 上完整复制」的模块，设计 <span class="math inline">\(g/\bar g\)</span> 这对组合通信算子，在不增加总通信量的前提下，将其沿 sequence 维度切分。</li>
+<li><strong>选择性激活重计算（Selective Activation Recomputation）</strong>：基于内存模型，把注意力中 QKV 之后、softmax 与注意力输出区域标记为「大激活、小计算」，只对这部分做 checkpoint + recompute。</li>
+<li><strong>管线首层压力分析（Pipeline Stage-0 Pressure）</strong>：在 1F1B 调度下，分析首个流水 stage 需要同时维护多少 micro-batch 的激活，从而给出总激活内存的估计，用来判断是否需要重计算。</li>
+</ul>
+<h3 id="数据流与控制流">3.2 数据流与控制流</h3>
+<p>以典型的 decoder-only Transformer + TP/PP 为例，可以把数据/控制流抽象成下面几步（只关注单个 stage 内）：</p>
+<ol type="1">
+<li><strong>输入与嵌入</strong>
+<ol type="1">
+<li>读入形状为 <span class="math inline">\((s, b)\)</span> 的 token id，过词嵌入与位置嵌入，得到形状 <span class="math inline">\((s, b, h)\)</span> 的张量 <span class="math inline">\(X^{(0)}\)</span>。</li>
+<li>若采用张量并行，嵌入权重通常是列切分，但嵌入输出仍在每个 TP rank 上完整保留序列维度。</li>
+</ol></li>
+<li><strong>第 <span class="math inline">\(l\)</span> 层：LayerNorm + Self-Attention（带 TP+SP）</strong>
+<ol type="1">
+<li>各 TP rank 持有该层输入的一个序列分片 <span class="math inline">\(X^{(l)}_k \in \mathbb{R}^{s_k \times b \times h}\)</span>，其中 <span class="math inline">\(s_k = s / t_\text{SP}\)</span>（序列并行大小）。</li>
+<li>对每个 <span class="math inline">\(X^{(l)}_k\)</span> 做本地 LayerNorm 与 Dropout（序列并行，彼此独立）。</li>
+<li>在进入 QKV 线性层前，通过 <span class="math inline">\(g\)</span>（all-gather on sequence）把所有 rank 的序列分片拼成完整的 <span class="math inline">\((s, b, h/t)\)</span>，再在张量并行维度上做 Q/K/V 的矩阵乘。</li>
+<li>计算注意力得分、softmax、dropout、与 V 的乘积，得到注意力输出。</li>
+<li>注意力输出过输出线性层（TP），然后通过 <span class="math inline">\(\bar g\)</span>（reduce-scatter on sequence）把结果重新切回序列并行布局 <span class="math inline">\((s_k, b, h)\)</span>，并加残差。</li>
+</ol></li>
+<li><strong>第 <span class="math inline">\(l\)</span> 层：LayerNorm + MLP（带 TP+SP）</strong>
+<ol type="1">
+<li>同样在序列切分的布局下，对每个 <span class="math inline">\(X^{(l)}_\text{attn-out}\)</span> 做 LayerNorm + Dropout。</li>
+<li>通过 <span class="math inline">\(g\)</span> 做序列 all-gather，进入第一层 MLP 线性+GeLU+第二层线性，整个过程是张量并行。</li>
+<li>输出通过 <span class="math inline">\(\bar g\)</span> 做 reduce-scatter 回到序列并行布局，再做 Dropout + 残差。</li>
+</ol></li>
+<li><strong>流水并行与 micro-batch 控制控制流</strong>
+<ol type="1">
+<li>全网络按层被切成 <span class="math inline">\(p\)</span> 个流水 stage；每个 stage 只包含局部的若干层。</li>
+<li>在 1F1B 调度下，第一个 stage 需要同时缓存多个 micro-batch 的输入/中间激活，以保持流水「灌满」，它是激活内存压力最大的 stage。</li>
+<li>后续 stage 的激活峰值相对较低，但仍按类似的 TP+SP 方式进行计算。</li>
+</ol></li>
+<li><strong>选择性激活重计算控制流（Selective Recompute）</strong>
+<ol type="1">
+<li>在前向时，对「大激活、小计算」区域（QKV 之后到注意力输出这段）不保存中间激活，而只保存进入该区域的输入。</li>
+<li>在反向时，先从保存的输入重新前向一遍这段算子（只在单层内，且 FLOPs/byte 很小），再用这些临时激活完成梯度反传。</li>
+<li>对于 LayerNorm、MLP 这类「内存小、计算多」的区域，则保留激活，避免重算贵的计算。</li>
+</ol></li>
+<li><strong>与数据并行/优化器的关系</strong>
+<ol type="1">
+<li>数据并行负责跨节点的梯度 all-reduce，对本文两项技术基本正交。</li>
+<li>优化器状态（如 Adam 的动量与二阶矩）通常配合 ZeRO 等方法做切分或 offload，本论文不对其做新的修改。</li>
+</ol></li>
+</ol>
+<h3 id="关键假设与适用范围">3.3 关键假设与适用范围</h3>
+<ol type="1">
+<li><strong>只统计主导激活内存的张量</strong>
+<ul>
+<li>假设：在 LayerNorm 中，只统计输入张量的内存，不考虑均值/方差向量，因为它们规模为 <span class="math inline">\(O(h)\)</span>，远小于 <span class="math inline">\(O(sbh)\)</span>。</li>
+<li>可能失效：如果采用了非常小的序列长度或超小 batch（例如 tiny benchmark），则这些「被忽略」的小张量比例不再可以忽略，但这类场景通常不是本论文面向的超大模型训练。</li>
+</ul></li>
+<li><strong>所有激活为 FP16/BF16，dropout mask 为 1 byte</strong>
+<ul>
+<li>假设：激活内存按 2 字节/元素（半精度）计算，dropout mask 只占 1 字节。</li>
+<li>不成立场景：如果在 debug 模式下全网络使用 FP32，或者使用特殊的 bit-mask 编码，则常数因子会变，但公式中关于 TP/SP/PP 缩放关系仍成立。</li>
+</ul></li>
+<li><strong>通信瓶颈主要由总带宽决定，而非操作类型</strong>
+<ul>
+<li>假设：环形 all-reduce 的实现可以视作「reduce-scatter + all-gather」，因此把 4 次 all-reduce 换成 4 次 reduce-scatter + 4 次 all-gather，不会增加总通信量。</li>
+<li>可能失效：在网络栈实现非常不均衡的系统上（例如 all-reduce 做了更激进的 overlap 优化，而 reduce-scatter/all-gather 没有），SP 的实际性能可能略差，需要依赖框架的通信实现细节。</li>
+</ul></li>
+<li><strong>Pipeline 只改变激活“复制倍数”，不改变每层公式形态</strong>
+<ul>
+<li>假设：总激活内存 ≈「首 stage 所需的层数 × 每层激活内存」，其它 stage 的峰值不主导整体。</li>
+<li>不成立场景：如果采用非常不同的流水调度（例如深度 interleaving 或异步调度），激活峰值位置可能从首 stage 移到中间 stage，需要重新评估；但这类设计目前在主流开源栈中较少见。</li>
+</ul></li>
+<li><strong>模型结构接近 GPT-3/MT-NLG 这类标准 Transformer</strong>
+<ul>
+<li>假设：单塔、多层、每层结构基本一致，没有层间结构大幅变化（例如中途插入大卷积、超大的 MoE 层）。</li>
+<li>不成立场景：遇到 MoE、大型卷积、Cross-Attention 等结构时，激活内存的主导项会发生变化，本文给出的常数（例如 34、5）需要重新推导。</li>
+</ul></li>
+</ol>
+<h3 id="数学公式与算法解读">3.4 数学公式与算法解读</h3>
+<p>这一节挑几条论文中最关键、也最实用的激活内存公式来解读。为了便于博客展示，下面公式写成 LaTeX 形式，与原文等价或略作简化，并在需要时显式标注「等价重写」。</p>
+<h4 id="单层激活内存无并行公式-1">3.4.1 单层激活内存（无并行）——公式 (1)</h4>
+<p><strong>原文中的公式：</strong></p>
+<p>假设：</p>
+<ul>
+<li>序列长度：<span class="math inline">\(s\)</span></li>
+<li>micro-batch 大小：<span class="math inline">\(b\)</span></li>
+<li>隐层维度：<span class="math inline">\(h\)</span></li>
+<li>注意力头数：<span class="math inline">\(a\)</span></li>
+</ul>
+<p>那么，<strong>在不使用任何模型并行时</strong>，单个 Transformer 层的激活内存近似为：</p>
+<p><span class="math display">\[
+M_{\text{act, layer}}
+= s b h \left( 34 + \frac{5 a s}{h} \right)
+\tag{1}
+\]</span></p>
+<blockquote>
+<p>这里单位是「字节」，系数 34 与 5 都已经包含了「2 字节/激活、1 字节/dropout mask」等常数。</p>
+</blockquote>
+<p><strong>符号与含义：</strong></p>
+<ul>
+<li><span class="math inline">\(sbh\)</span>：一层输入/输出张量的元素个数，是所有项的公共因子。</li>
+<li><span class="math inline">\(34\)</span>：来自「LayerNorm + 两次 MLP + 残差等」所需保存的激活，规模与 <span class="math inline">\(sbh\)</span> 成正比。</li>
+<li><span class="math inline">\(\frac{5 a s}{h}\)</span>：来自注意力中 Q/K/V 之后的部分（注意力得分、softmax、softmax dropout、attention over <span class="math inline">\(V\)</span> 等），整体为 <span class="math inline">\(5 a s^2 b\)</span>，即对 <span class="math inline">\(s\)</span> 是<strong>二次</strong>增长，对头数 <span class="math inline">\(a\)</span> 线性增长。</li>
+</ul>
+<p><strong>直观版操作描述：</strong></p>
+<ol type="1">
+<li>把一层 Transformer 拆成 Attention、MLP、两处 LayerNorm。</li>
+<li>对每一块，数清楚需要在反向阶段用到哪些前向张量（输入、输出、mask 等），用它们的形状乘以字节数得到内存。</li>
+<li>把这些项全部按 <span class="math inline">\(sbh\)</span> 提取公因子，整理出一个简单的线性/二次多项式（就是上式括号里的那一坨）。</li>
+<li>注意到其中最「危险」的是 <span class="math inline">\(5 a s^2 b\)</span> 这一项：如果序列翻倍，激活内存会乘以 4，这就是长序列训练时激活爆炸的根本原因之一。</li>
+</ol>
+<h4 id="加入张量并行后的单层内存公式-2">3.4.2 加入张量并行后的单层内存——公式 (2)</h4>
+<p>在 Megatron 风格的张量并行中，我们按隐藏维度 <span class="math inline">\(h\)</span> 将权重和一部分激活按列/行切分到 <span class="math inline">\(t\)</span> 个设备上，但 LayerNorm、部分 dropout 仍然在每个 rank 上完整持有。</p>
+<p><strong>原文中的公式（略作整理）：</strong></p>
+<p>设张量并行大小为 <span class="math inline">\(t\)</span>，那么单层激活内存近似为：</p>
+<p><span class="math display">\[
+M_{\text{act, TP}}
+= s b h \left(
+10 + \frac{24}{t} + \frac{5 a s}{h t}
+\right)
+\tag{2}
+\]</span></p>
+<p><strong>式子在解决什么问题？</strong></p>
+<ul>
+<li>它回答的是：<strong>仅靠张量并行，到底能省下多少激活内存？</strong></li>
+<li>可以看到，只有「24」和「<span class="math inline">\(5 a s/h\)</span>」这两项被 <span class="math inline">\(t\)</span> 除了，而前面的 10 没有。这正对应「Attention 与 MLP 内部可以切分，LayerNorm 与残差仍然复制」。</li>
+</ul>
+<p><strong>关键符号解释：</strong></p>
+<ul>
+<li><span class="math inline">\(10\)</span>：那些完全不能被 TP 切分、在每个 rank 上完整复制的激活（主要是 LayerNorm、部分 Dropout 之后的输出）。</li>
+<li><span class="math inline">\(\frac{24}{t}\)</span>：那些在 Attention/MLP 内部可以随 <span class="math inline">\(t\)</span> 等比例缩减的激活。</li>
+<li><span class="math inline">\(\frac{5 a s}{h t}\)</span>：来源于注意力块中那一坨「大激活」；它被 <span class="math inline">\(t\)</span> 除了，但仍然是 <span class="math inline">\(O(s^2)\)</span>，同时引入了 <span class="math inline">\(1/t\)</span> 缩放。</li>
+</ul>
+<p><strong>直观版理解：</strong></p>
+<ul>
+<li>把公式 (1) 看成 <span class="math inline">\(sbh(10 + 24 + 5as/h)\)</span>。</li>
+<li>开启 TP 后，只有「24 + 5as/h」部分被 <span class="math inline">\(t\)</span> 缩小，而 10 这块还是每个 rank 各存一份。</li>
+<li>这意味着：<strong>靠加大 TP size，并不能无限制压缩激活内存</strong>，因为那 10 的部分始终在挡路。</li>
+</ul>
+<h4 id="张量并行-序列并行公式-4">3.4.3 张量并行 + 序列并行——公式 (4)</h4>
+<p>序列并行的目标就是：<strong>把那块「永远不会被 TP 除以 <span class="math inline">\(t\)</span> 的 10」也均匀分摊到各个设备上</strong>。</p>
+<p>作者通过 <span class="math inline">\(g/\bar g\)</span> 这对「AllGather + ReduceScatter」算子，把 LayerNorm/Dropout 等区域沿序列维度切分，最终得到：</p>
+<p><span class="math display">\[
+M_{\text{act, TP+SP}}
+= \frac{s b h}{t}
+\left( 34 + \frac{5 a s}{h} \right)
+\tag{4}
+\]</span></p>
+<p>可以看到，这个式子实际上就是直接把公式 (1) <strong>整体除以 <span class="math inline">\(t\)</span></strong>：</p>
+<p><span class="math display">\[
+M_{\text{act, TP+SP}}
+= \frac{1}{t} M_{\text{act, layer}}
+\]</span></p>
+<p><strong>直观含义：</strong></p>
+<ul>
+<li>引入 SP 之后，<strong>所有主导激活内存的模块都被均匀切到了 <span class="math inline">\(t\)</span> 个设备上</strong>，而不是只切一部分。</li>
+<li>由于 all-reduce 本身就是 reduce-scatter + all-gather 组成，作者把 LayerNorm/Dropout 前后的通信合并到现有的 all-reduce 流里，并没有增加总带宽消耗。</li>
+<li>在「激活内存」这一维度上，TP+SP 的效果就像「完美 model parallel」——每个设备承担 <span class="math inline">\(1/t\)</span> 的激活。</li>
+</ul>
+<h4 id="选择性激活重计算后的总激活内存公式-56-概念版">3.4.4 选择性激活重计算后的总激活内存——公式 (5)/(6) 概念版</h4>
+<p>在加入流水并行和 1F1B 调度后，首个 pipeline stage 必须同时维持多个 micro-batch 的激活。作者给出了一个总内存的近似公式（原文 (5)），本质上是：</p>
+<blockquote>
+<p><strong>首 stage 总激活内存 ≈ micro-batch 数量 × 本 stage 层数 × 单层激活内存</strong></p>
+</blockquote>
+<p>再在此基础上，作者考虑「<strong>只对注意力中 QKV 之后那一段做重计算</strong>」的选择性策略，得到一个新的公式 (6)。其核心性质是：</p>
+<ul>
+<li>删除了公式 (4) 中那一项 <span class="math inline">\(\dfrac{5 a s}{h}\)</span>，也就是与 QKV 之后区域相关、对 <span class="math inline">\(s\)</span> 是二次增长的部分；</li>
+<li>于是，<strong>总激活内存从 <span class="math inline">\(O(s^2)\)</span> 降为 <span class="math inline">\(O(s)\)</span>，并且不再依赖注意力头数 <span class="math inline">\(a\)</span></strong>。</li>
+</ul>
+<p>为了便于直观理解，可以用一个<strong>等价重写后的简化形式</strong>来描述选择性重计算下的首 stage 激活内存（这里只保留量纲正确的主导项，省略常数）：</p>
+<p><span class="math display">\[
+M_{\text{act, total}}^{\text{(TP+SP+SelRecomp)}}
+\approx
+\underbrace{\frac{m L}{p}}_{\text{首 stage 上的有效层数}}
+\cdot
+\underbrace{\frac{34\, s b h}{t}}_{\text{每层在 TP+SP 下的激活}}
+\]</span></p>
+<p>其中：</p>
+<ul>
+<li><span class="math inline">\(m\)</span>：1F1B 调度下，为保持流水饱和，需要同时在首 stage 留存的 micro-batch 数；</li>
+<li><span class="math inline">\(L\)</span>：总层数，<span class="math inline">\(L/p\)</span> 是每个 stage 的层数；</li>
+<li>34 是前面提到的「除注意力中大激活之外的其它部分」的常数。</li>
+</ul>
+<p><strong>直观描述：</strong></p>
+<ol type="1">
+<li>在没有重计算时，注意力块中 <span class="math inline">\(O(s^2)\)</span> 的那部分激活会主导总内存，长序列很快就炸。</li>
+<li>选择性重计算把这块大激活直接从内存模型里删掉，改为在反向时临时重算，代价只与 FLOPs/byte 非常低的一段计算相关。</li>
+<li>剩下的激活都是 <span class="math inline">\(O(s)\)</span> 级别（比如 LayerNorm、MLP 中间层等），再经过 TP+SP 均摊后，总体激活规模随 <span class="math inline">\(s\)</span> 线性增长。</li>
+</ol>
+<hr />
+<p><strong>与常见训练栈的对应关系</strong></p>
+<p>从大规模训练系统的角度看，论文中的模块可以粗略映射到「我的训练栈（如 Megatron / DeepSpeed / vLLM 等）」的不同层面：</p>
+<ul>
+<li><strong>张量并行 / 序列并行实现层（模型并行层）</strong>
+<ul>
+<li>对应于「模型并行库」中对 Linear / LayerNorm / Dropout 等算子的重写：
+<ul>
+<li>在张量并行维度上切分权重与激活；</li>
+<li>在序列维度上切分 LayerNorm/Dropout，并实现 <span class="math inline">\(g/\bar g\)</span> 这样的 all-gather / reduce-scatter 包装算子。</li>
+</ul></li>
+</ul></li>
+<li><strong>调度与拓扑层（并行调度层）</strong>
+<ul>
+<li>对应 TP/PP/DP 配置和拓扑映射（比如每 8 卡一组做 TP，多个组做 PP），本论文给出了在这些配置下的激活内存闭式表达式，可以用来驱动自动配置搜索。</li>
+</ul></li>
+<li><strong>算子与 kernel 层（kernel/通信层）</strong>
+<ul>
+<li>对应于 fused QKV / fused attention / fused MLP kernel 的实现，需要支持：
+<ul>
+<li>在序列切分下的本地 LayerNorm &amp; Dropout；</li>
+<li>与通信库（NCCL / 自定义通信后端）结合的 all-gather / reduce-scatter overlap。</li>
+</ul></li>
+</ul></li>
+<li><strong>训练图/自动微分层（框架层）</strong>
+<ul>
+<li>选择性激活重计算需要在 autograd 或图优化层面插入 checkpoint 节点，只覆盖注意力中指定区域（softmax + dropout + attention over V）。</li>
+</ul></li>
+<li><strong>监控与调优层</strong>
+<ul>
+<li>根据内存模型，暴露 per-layer 激活峰值指标；结合 MFU/HFU，可帮助判断是不是「重计算太多了」或「TP/SP 配置不合理」。</li>
+</ul></li>
+</ul>
+<hr />
+<h2 id="四建模方式与评估指标">四、建模方式与评估指标</h2>
+<h3 id="问题是如何形式化的">4.1 问题是如何形式化的？</h3>
+<p>在本文中，作者把问题形式化为一个<strong>带约束的优化问题</strong>：</p>
+<ul>
+<li><strong>目标 1：在给定硬件（单卡显存容量、通信拓扑）与模型结构（<span class="math inline">\(L,s,h,a\)</span> 等）下，使总激活内存不超过单卡显存上限。</strong></li>
+<li><strong>目标 2：在满足内存约束的前提下，最小化由于激活重计算带来的额外 FLOPs 和时间开销。</strong></li>
+</ul>
+<p>围绕这两个目标，论文构建了两套模型：</p>
+<ol type="1">
+<li><strong>激活内存模型</strong>
+<ul>
+<li>基于前面第 3 节的推导，给出在不同并行策略组合下（No MP、TP、TP+SP、TP+SP+Pipeline、再叠加 Selective Recompute）的<strong>闭式内存公式</strong>。</li>
+<li>模型中忽略了一些二阶效应（如小缓冲区、内存碎片、对齐填充），但可以很好地捕获主导项（<span class="math inline">\(O(sbh)\)</span> 和 <span class="math inline">\(O(as^2b)\)</span>）。</li>
+</ul></li>
+<li><strong>FLOPs / 时间模型</strong>
+<ul>
+<li>将重计算区域视为「额外的前向 pass」，对其 FLOPs 消耗单独建模。</li>
+<li>引入<strong>Model FLOPs Utilization (MFU)</strong> 与 <strong>Hardware FLOPs Utilization (HFU)</strong>：
+<ul>
+<li>MFU：理论模型 FLOPs /（迭代时间 × 理论峰值 FLOPs）。</li>
+<li>HFU：实际执行的 FLOPs（包含重计算）/（迭代时间 × 理论峰值 FLOPs）。</li>
+</ul></li>
+<li>通过比较使用全重计算 vs selective recompute 的 MFU/HFU，评估「同样的（甚至更低的）内存约束下，算力利用率提升多少」。</li>
+</ul></li>
+</ol>
+<h3 id="核心评估指标">4.2 核心评估指标</h3>
+<p>论文中用到的关键指标可以归纳为以下几类：</p>
+<ol type="1">
+<li><strong>每层激活内存（Bytes / Layer）</strong>
+<ul>
+<li>定义：在固定 TP/PP/SP 配置下，单层 Transformer 在前向过程中需要保留用于反向的激活内存大小。</li>
+<li>作用：直接用于比较不同技术（TP 基线、TP+SP、Selective Recompute、Full Recompute）在<strong>显存占用维度</strong>的优劣，也可作为配置搜索时的约束。</li>
+</ul></li>
+<li><strong>激活内存占 TP 基线百分比（% of TP Baseline）</strong>
+<ul>
+<li>定义：各种技术下的激活内存，除以「只做张量并行、不做任何重计算」时的激活内存。</li>
+<li>作用：统一不同模型规模，直观展示「内存削减倍数」，例如 TP+SP+Selective Recompute 可把激活内存压到 TP 基线的 20% 左右。</li>
+</ul></li>
+<li><strong>每层前向/反向/重计算时间（ms per layer）</strong>
+<ul>
+<li>定义：在 22B 模型上，只保留一层的实验中，测量单层 forward、backward 和（如有）recompute 所需时间。</li>
+<li>作用：刻画不同技术组合的<strong>局部算子级开销</strong>，例如：
+<ul>
+<li>全重计算：重算整层，带来约 39% 的整体时间开销；</li>
+<li>选择性重计算：只重算注意力中的小区域，整体开销降到约 7%。</li>
+</ul></li>
+</ul></li>
+<li><strong>端到端单次迭代时间（s / iter）与吞吐（samples / s 或 TFLOPs / s）</strong>
+<ul>
+<li>定义：在 22B、175B、530B、1T 四种规模下，完整前后向和必要通信的时间。</li>
+<li>作用：从系统角度检验技术是否真的「加速了训练」，例如 530B 模型上，迭代时间从全重算时的 49.05s 降到 37.83s，吞吐提升约 30%。</li>
+</ul></li>
+<li><strong>Model FLOPs Utilization (MFU) 与 Hardware FLOPs Utilization (HFU)</strong>
+<ul>
+<li>定义：
+<ul>
+<li>MFU：理论模型 FLOPs /（迭代时间 × 理论峰值 FLOPs）。</li>
+<li>HFU：真实执行 FLOPs（包含重计算）/（迭代时间 × 理论峰值 FLOPs）。</li>
+</ul></li>
+<li>作用：衡量「在满足内存约束的前提下，算力利用率有多高」，本文最终在 530B/1T 模型上可达到 ~56% 的 MFU，说明在极大模型下效率反而更好。</li>
+</ul></li>
+<li><strong>重计算开销占比（Recompute Overhead %）</strong>
+<ul>
+<li>定义：在所有技术下，重计算部分耗时与不重算时基线耗时的比值。</li>
+<li>作用：直接体现选择性重计算的优势——从全重算的 30–40% 开销，降低到个位数，且随着模型变大，比例进一步下降。</li>
+</ul></li>
+</ol>
+<hr />
+<h2 id="五主要实验发现">五、主要实验发现</h2>
+<p>从工程实践角度看，论文中最重要的实验结论可以归纳为：</p>
+<ul>
+<li><strong>激活内存削减幅度巨大</strong>：在 22B–1T 的四个模型配置上，序列并行和选择性重计算分别能将激活内存削减近一半，两个技术叠加时，可将激活内存压缩到 TP 基线的约 1/5，使原本根本装不下的模型可以在单卡 80GB 显存上训练。</li>
+<li><strong>重计算的时间开销被极大缓解</strong>：在 22B 模型上，全层重计算带来约 39% 的额外时间，而选择性重计算将这一数字压到约 7%；对于 530B 和 1T 模型，这一开销进一步降至个位数的较低水平。</li>
+<li><strong>整体训练吞吐显著提升</strong>：在 530B GPT-3 风格模型上，使用本文方法后，端到端迭代时间从全重算方案的 49.05s 减少到 37.83s，吞吐提升约 30%，对应 MFU 从 ~42% 提升到 ~54%。</li>
+<li><strong>序列并行本身也带来适度加速</strong>：即便不考虑重计算，只启用 TP+SP，也能让单层前向时间从 7.7ms 略降到 7.2ms，主要原因是 LayerNorm 与 Dropout 在更小的张量上执行。</li>
+<li><strong>随着模型变大，收益更可观</strong>：在 1T 模型上，MFU/HFU 都达到约 56–57%，说明「大模型反而更适合享受这些优化」，这对当前超大 LLM 训练非常重要。</li>
+</ul>
+<h3 id="关键图表解读">5.1 关键图表解读</h3>
+<ol type="1">
+<li><strong>图 1：参数、优化器状态与激活内存在不同模型规模下的分布</strong>
+<ul>
+<li>现象：随着模型参数从 22B 增长到 1T，激活内存在总显存占比中越来越占主导地位，且在 TP 基线下远超单卡 80GB 容量。</li>
+<li>支撑主张：证明「激活才是大模型训练的主要内存瓶颈」，为后续集中优化激活而非参数/优化器提供动机。</li>
+</ul></li>
+<li><strong>表 2 &amp; 图 7：不同技术组合下的激活内存占比</strong>
+<ul>
+<li>现象：以 TP 基线为 100%：
+<ul>
+<li>只做序列并行：激活内存降低到约 50%；</li>
+<li>只做选择性重计算：也能降到接近 50%；</li>
+<li>两者叠加：进一步压缩到 20% 左右；</li>
+<li>全层重计算：虽也能达到类似的内存水平，但带来的重计算开销远大于选择性方案。</li>
+</ul></li>
+<li>支撑主张：说明「TP+SP+Selective Recompute」是一个在<strong>内存与计算开销之间非常均衡的点</strong>，几乎可以替代传统的「全重计算」方案。</li>
+</ul></li>
+<li><strong>图 8 &amp; 表 4：单层前向/反向/重计算时间分解</strong>
+<ul>
+<li>现象：在 22B 模型单层实验中：
+<ul>
+<li>全重算：单层总时间从 19.6ms 增加到 27.2ms；</li>
+<li>选择性重算：仅增加到 20.9ms；</li>
+<li>再叠加序列并行：进一步压缩到 20.3ms。</li>
+</ul></li>
+<li>支撑主张：直接展示「选择性重算 + 序列并行」在时间维度的优势 —— 内存削减幅度接近全重算，但时间开销小得多。</li>
+</ul></li>
+<li><strong>表 5：22B/175B/530B/1T 的迭代时间与 MFU/HFU</strong>
+<ul>
+<li>现象：所有模型规模下，本文方法相对于全重算至少带来约 30% 的吞吐提升，且 MFU/HFU 随模型规模增大而上升，在 1T 模型上达到 56% 左右。</li>
+<li>支撑主张：证明本文的优化不仅是「局部算子层面的好看」，而且在<strong>真实的大规模训练任务中给出了可观的端到端收益</strong>。</li>
+</ul></li>
+</ol>
+<p><strong>结果解读与边界</strong></p>
+<ul>
+<li>从整体上看，实验非常有力地支持了两个核心结论：
+<ul>
+<li>（1）序列并行在不增加通信带宽的前提下，对激活内存削减有决定性贡献；</li>
+<li>（2）在此基础上只对部分模块做选择性重算，可以在几乎不牺牲算力利用率的情况下达到接近「全重算」的内存节省效果。</li>
+</ul></li>
+<li>但仍有一些明显未覆盖或值得注意的维度：
+<ul>
+<li>没有系统评估与 ZeRO/Offload 等「跨层次内存优化」技术叠加后的效果，实际工程中可能需要联合使用。</li>
+<li>评估没有涉及 MoE、encoder-decoder、长上下文等更复杂结构，激活内存构成会发生变化。</li>
+<li>实验主要基于单一通信拓扑与 GPU 型号，对异构集群（不同显存/带宽）上的适配和鲁棒性没有展开讨论。</li>
+</ul></li>
+</ul>
+<hr />
+<h2 id="六优点与局限">六、优点与局限</h2>
+<p><strong>亮点（Strengths）</strong></p>
+<ul>
+<li><strong>问题聚焦、抓住主矛盾</strong>：明确聚焦在「激活内存 + 重计算开销」这一关键瓶颈，而不是试图在同一篇论文内同时解决参数/优化器/通信等所有问题。</li>
+<li><strong>分析严谨、公式实用</strong>：整套激活内存模型从算子层面逐项累积，最终给出简洁的闭式表达式，便于在工程中直接用于 TP/PP/MB 配置搜索。</li>
+<li><strong>方法简单、工程门槛低</strong>：序列并行只需要对 LayerNorm/Dropout 周围增加少量 all-gather / reduce-scatter；选择性重算只改变 checkpoint 的范围，不改模型结构。</li>
+<li><strong>与现有并行框架高度兼容</strong>：TP/PP/DP 仍然沿用现有实现，两项技术更多是「在边上加点调味」，可以自然融入常见的大模型训练栈。</li>
+<li><strong>端到端收益显著且随模型放大</strong>：在 530B/1T 级别上，MFU 提升和内存削减都更明显，这与当前行业向超大模型演进的趋势高度契合。</li>
+<li><strong>论文写作清晰</strong>：大量图表（激活内存分布、每层时间分解、不同技术组合对比）帮助读者快速构建直觉。</li>
+</ul>
+<p><strong>局限（Limitations）</strong></p>
+<ul>
+<li><strong>模型结构单一</strong>：主要基于 GPT-3/MT-NLG 风格的 decoder-only 堆叠，对 encoder-decoder、MoE 或长序列专用结构（如 ALiBi / RoPE 变种）尚未给出详细分析。</li>
+<li><strong>内存碎片与 allocator 行为未建模</strong>：公式以「字节总数」为主，不讨论 allocator 造成的碎片，这在大型 micro-batch、复杂 kernel 组合下可能成为新的瓶颈。</li>
+<li><strong>与 ZeRO/Offload 等技术的耦合不充分</strong>：虽然声称彼此是互补关系，但缺乏系统实验说明「在同一资源约束下，如何选择/组合这些技术」。</li>
+<li><strong>对通信实现的依赖较强</strong>：序列并行高度依赖 reduce-scatter/all-gather 的高效实现，若通信库/网络不友好，理论上的「不增加带宽」不一定意味着「不增加时间」。</li>
+<li><strong>数据并行与实际训练规模的评估较有限</strong>：论文中的实验没有叠加 DP，因此 batch 大小和 GPU 数量与真实大规模训练场景仍有差距。</li>
+<li><strong>缺少可复现的公开实现细节</strong>：虽然提到会在主流框架中提供实现，但论文本身对 API 设计、具体代码路径缺少公开细节，读者需要自己在框架源码中拼凑。</li>
+</ul>
+<hr />
+<h2 id="七业内相关工作对比">七、业内相关工作对比</h2>
+<p>下面选取几篇与本文关系最密切的工作做简要对比：</p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>工作</th>
+<th>关注的问题</th>
+<th>方法路线</th>
+<th>关系与评价</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Sequence Parallelism: Long Sequence Training from System Perspective</strong></td>
+<td>长序列训练时的显存与通信瓶颈，尤其是自注意力 <span class="math inline">\(O(s^2)\)</span> 带来的问题</td>
+<td>沿序列维度切分输入与激活，引入 Ring Self-Attention，把注意力计算与环形通信交织在一起，实现 4D 并行</td>
+<td>更关注「打破单卡序列长度限制」，强调注意力本身的并行与通信；本文则更偏向在现有 TP + 标准注意力实现基础上的「局部序列并行」，两者在思想上类似，但本文的 SP 更易直接融入现有 Megatron 风格实现</td>
+</tr>
+<tr class="even">
+<td><strong>ZeRO / ZeRO-Infinity</strong></td>
+<td>参数与优化器状态的显存瓶颈，以及在有限 GPU 数量下训练超大参数模型</td>
+<td>按数据并行 rank 切分参数/梯度/优化器状态，并通过 CPU / NVMe offload 扩展可用内存</td>
+<td>主要「打的是参数/优化器这块的存储」，与本文聚焦的激活内存高度互补；在实际系统中，常见做法是「ZeRO + TP/PP + 本文的 SP + 选择性重算」叠加使用</td>
+</tr>
+<tr class="odd">
+<td><strong>GSPMD / 其他通用并行编译方案</strong></td>
+<td>在编译层面统一描述多维并行方案（DP/TP/SP 等）并自动生成通信</td>
+<td>把张量拆分策略抽象为 SPMD program，通过编译器自动插入通信算子</td>
+<td>提供了包含序列并行在内的通用表达能力，但论文主要面向框架/编译器层；本文则是在固定实现框架内给出「如何选配置、如何避坑」的工程化方案，粒度更低、更贴近具体算子</td>
+</tr>
+</tbody>
+</table>
+<p>整体来看，本文更像是「站在 Megatron 风格 3D 并行的肩膀上做局部 but high impact 的内存优化」，与 ZeRO/Offload/通用 SPMD 等工作呈互补关系。</p>
+<h3 id="个人观点">7.1 个人观点</h3>
+<p>从个人阅读体验来看，这篇论文有几个让我印象比较深的地方：</p>
+<ul>
+<li>在 baseline 选择上，作者采用的是「已经使用张量并行、没有重计算」以及「张量并行 + 全层重计算」这两个极具代表性的方案，比较公平，也符合目前很多大规模训练项目的实践。</li>
+<li>激活内存模型写得非常「工程向」：不是停留在 <span class="math inline">\(O(\cdot)\)</span> 级别，而是把各种常数系数算清楚，这对于做 TP/PP/MB 搜索非常有用。</li>
+<li>若要挑毛病，我会希望看到更多「与 ZeRO/Offload 联合使用」的实验，例如在相同 GPU 数量下，对比「只靠 Offload」与「Offload + SP + 选择性重算」的综合收益，这样更贴近很多团队的真实环境。</li>
+<li>如果让我来设计一版改进实验，我可能会增加：
+<ul>
+<li>MoE 和 encoder-decoder 架构下的验证，看看激活热点是不是会迁移到别的模块；</li>
+<li>在中等规模集群（例如 128–512 GPU）上的评估，以体现这些技术在非超大集群上的实用价值。</li>
+</ul></li>
+</ul>
+<hr />
+<h2 id="八在实际训练栈中如何落地">八、在实际训练栈中如何落地？</h2>
+<p>从「我的大规模训练栈（如 Megatron / DeepSpeed / vLLM 等）」的角度出发，要落地本文方法，大致可以从以下几个维度考虑：</p>
+<ol type="1">
+<li><strong>模型并行层（TP/SP 实现）</strong>
+<ul>
+<li>如果已有 Megatron 风格 TP：
+<ul>
+<li>检查 Linear / LayerNorm / Dropout 等算子是否有「sequence parallel」版本。</li>
+<li>为 LayerNorm/Dropout 增加序列切分形态：输入形状从 <span class="math inline">\((s, b, h)\)</span> 变为 <span class="math inline">\((s_\text{local}, b, h)\)</span>。</li>
+<li>在进入 QKV/MLP 前后，插入 sequence 维度上的 all-gather / reduce-scatter，并尽可能与现有 all-reduce 合并。</li>
+</ul></li>
+<li>若使用编译器/图并行方案（如 GSPMD），则可通过「在 LayerNorm / Dropout 上指定沿 sequence 维度拆分」的方式实现 SP。</li>
+</ul></li>
+<li><strong>并行调度与配置搜索（TP/PP/DP/MB）</strong>
+<ul>
+<li>利用论文给出的激活内存公式，做一个简单的「配置搜索器」：
+<ul>
+<li>输入：候选的 TP/PP/MB 组合、模型超参 <span class="math inline">\((L,s,h,a)\)</span>、显存上限。</li>
+<li>输出：在不启用/启用不同重计算策略时的内存需求和理论重计算开销。</li>
+</ul></li>
+<li>搜索策略可以是：
+<ul>
+<li>先确定 TP（通常受节点内拓扑限制），再在「PP 与 micro-batch」之间做 trade-off；</li>
+<li>在内存裕量较大时尽量不开启重计算，有需要时优先启用选择性重算而非全重算。</li>
+</ul></li>
+</ul></li>
+<li><strong>选择性激活重计算的实现</strong>
+<ul>
+<li>在 PyTorch 等框架中，可以通过自定义 autograd.Function 或 <code>torch.utils.checkpoint</code> 来实现「部分子图重算」：
+<ul>
+<li>包含 softmax、attention dropout、attention over V 的那一段封装为一个函数，在反向时重新跑一遍前向；</li>
+<li>注意确保随机数种子一致（尤其是 dropout），避免重算前后数值不一致。</li>
+</ul></li>
+<li>在 fused kernel 场景下，可能需要在 CUDA/Triton 级别拆分 kernel，以暴露可以 checkpoint 的边界。</li>
+</ul></li>
+<li><strong>数据加载与预处理</strong>
+<ul>
+<li>论文的优化主要针对模型内部计算，DataLoader 侧不需要特殊改动。</li>
+<li>需要注意的是：序列并行使得「每个 rank 持有的序列片段不同」，这对某些按序列维度统计的度量（如 attention mask 的构造）可能有影响，需要保证 mask 的生成与 SP 一致。</li>
+</ul></li>
+<li><strong>通信与集体操作</strong>
+<ul>
+<li>确保通信库对 reduce-scatter / all-gather 的实现与 all-reduce 同样高效，并支持良好的 stream 与 compute overlap。</li>
+<li>在多节点、多机房拓扑下，需要仔细选择 TP/SP 的 group 划分，使 sequence 切分与高带宽域对齐（例如单机内做 TP/SP，跨机做 DP）。</li>
+</ul></li>
+<li><strong>监控与调试</strong>
+<ul>
+<li>加强以下监控指标：
+<ul>
+<li>per-layer 激活峰值与 reserved/allocated 差值，用于观察内存碎片；</li>
+<li>per-layer 前向/反向/重算时间比例，确认选择性重算区域没有「意外变贵」；</li>
+<li>全局 MFU/HFU 与网络带宽利用率。</li>
+</ul></li>
+<li>在 debug 阶段，可以先关闭 SP，仅启用选择性重算，验证数值正确性，再逐步加入 SP 以减少嵌套复杂度。</li>
+</ul></li>
+</ol>
+<p>整体上，如果已有成熟的 TP/PP/DP 栈，实现本文方法的主要工程工作量集中在：</p>
+<ul>
+<li>添加/打通序列并行路径（主要涉及 LayerNorm/Dropout 前后）；</li>
+<li>对注意力模块周边插入选择性 checkpoint 的逻辑；</li>
+<li>根据内存模型做一次 TP/PP 配置重审与脚本更新。</li>
+</ul>
+<hr />
+<h2 id="九值得进一步探索的研究方向">九、值得进一步探索的研究方向</h2>
+<ol type="1">
+<li><strong>更细粒度的「激活重计算调度器」</strong>
+<ul>
+<li>问题：目前的选择性重算仍然以「整块 attention 区域」为单位，是否可以在算子级别（如 softmax vs dropout vs matmul）进一步细化，自动选择最优重算子集？</li>
+<li>价值：在混合架构（MoE、卷积混合、长序列注意力）下，激活热点分布更加复杂，一个通用的「激活重算调度器」可以自动适配不同模型结构，减少人工调参。</li>
+</ul></li>
+<li><strong>与 ZeRO / Offload / CPU/NVMe 内存扩展的协同优化</strong>
+<ul>
+<li>问题：在同样的 GPU 数量与节点配置下，如何系统性评估「只做 Offload」 vs 「Offload + SP + 选择性重算」的组合收益，并给出统一的配置推荐？</li>
+<li>价值：很多团队已经在使用 ZeRO-Infinity 等方案，如果能提供一个联合优化视角，可以更好地利用 CPU/NVMe 与 GPU 显存的协同能力。</li>
+</ul></li>
+<li><strong>面向 MoE 与混合专家模型的激活内存建模</strong>
+<ul>
+<li>问题：MoE 层的激活构成与密集层非常不同，由路由与稀疏门控主导；现有内存模型对这部分没有显式建模。</li>
+<li>价值：随着大规模 MoE 模型愈发普及，为其设计专门的激活内存模型与选择性重算策略，可以在相同硬件上容纳更大的专家数与路由宽度。</li>
+</ul></li>
+<li><strong>流水并行与激活重计算的联合自动调度</strong>
+<ul>
+<li>问题：目前 1F1B 调度被默认采用，但不同 PP 深度与 interleaving 策略对首 stage 激活压力的影响很大。</li>
+<li>价值：如果能把「PP 调度」「SP 策略」「选择性重算」放到同一个搜索空间里，自动选择最优组合，可以进一步提升整体 MFU/HFU。</li>
+</ul></li>
+<li><strong>考虑内存碎片与 allocator 行为的更精细模型</strong>
+<ul>
+<li>问题：现实训练中，显存「reserved」往往远大于理论模型预测值，主要来自碎片与对齐。</li>
+<li>价值：在现有激活内存公式之上，再叠加一个简单的碎片/对齐模型（例如按块对齐、buddy allocator 行为），可以让配置搜索更贴近实测，减少「纸面上能跑、实际一跑就 OOM」的情况。</li>
+</ul></li>
+</ol>
+<hr />
+<h2 id="十知识图谱思维链">十、知识图谱思维链</h2>
+<p>从更大一点的知识图谱视角看，这篇论文与以下几个方向联系紧密：</p>
+<ul>
+<li><strong>并行与调度</strong>
+<ul>
+<li>把「序列并行」从一个单独的平行维度，变成「与张量并行深度耦合」的技术，通过 <span class="math inline">\(g/\bar g\)</span> 把 sequence/hidden 两个维度的分片自然拼到一起。</li>
+<li>在 1F1B 流水调度下，对首 stage 激活内存压力有了清晰的公式化刻画，可作为 PP 配置搜索的依据。</li>
+</ul></li>
+<li><strong>内存管理与显存优化</strong>
+<ul>
+<li>通过逐算子建模，把激活内存拆解为少数几个主导项（例如 <span class="math inline">\(O(sbh)\)</span>、<span class="math inline">\(O(as^2b)\)</span>），并明确指出哪一项可以通过 SP/重算消除。</li>
+<li>强调「先把显存问题解决到不需要全层重算」，再在少量区域做选择性重算，是一种更工程友好也更高效的路径。</li>
+</ul></li>
+<li><strong>通信与集体操作</strong>
+<ul>
+<li>提醒我们：很多时候，「看起来多了 reduce-scatter/all-gather」不一定意味着「总通信变多」，因为 all-reduce 本身就是两者的组合。</li>
+<li>对于通信栈的设计者，这是一个「重新思考算子级通信抽象」的典型案例。</li>
+</ul></li>
+<li><strong>kernel 与算子优化</strong>
+<ul>
+<li>在序列并行的前提下，LayerNorm/Dropout 等算子在更小的张量上运行，给 kernel 级优化带来新的空间（例如缓存行为更好）。</li>
+<li>选择性重算要求我们把注意力模块的计算图拆得足够细，使得某些子块可以被 checkpoint，而不影响整体的 fused kernel 性能。</li>
+</ul></li>
+<li><strong>模型结构与架构设计</strong>
+<ul>
+<li>内存模型揭示了「注意力中 QKV 之后那一段」是激活内存杀手，也为后续的「内存友好型注意力结构」提供了设计参考。</li>
+<li>从更高层看，这是一个典型的「模型结构 × 系统约束」双向反馈实例。</li>
+</ul></li>
+<li><strong>数据、预处理与打包策略</strong>
+<ul>
+<li>虽然本文不直接修改 DataLoader，但对序列长度 <span class="math inline">\(s\)</span> 的敏感性（尤其是 <span class="math inline">\(O(s^2)\)</span> 项）间接影响我们对「长序列 vs 短序列混合」「packing/padding 策略」的设计。</li>
+<li>在实际训练中，可能需要结合本文的模型，重新审视例如 sequence packing、动态 padding 等策略对激活内存的影响。</li>
+</ul></li>
+</ul>
+<h3 id="个人收获与反思">10.1 个人收获与反思</h3>
+<p>对我个人来说，这篇论文最大的启发有两点：</p>
+<ol type="1">
+<li><p><strong>先建模，再优化，而不是一上来就拍脑袋加重算</strong><br />
+以前在配置 TP/PP/MB 时，很多决策是「感觉上」可行，加一点 gradient checkpointing「能跑就行」。读完这篇论文之后，会更倾向于先写出一套类似的激活内存模型，把各种配置下的内存与重算 FLOPs 一目了然地算出来，再去选一个工程上合适的点。</p></li>
+<li><p><strong>小改动也可以有大收益，关键是找到“复制过多”的那一块</strong><br />
+序列并行本质上只是在 LayerNorm 与 Dropout 周围动了刀，而选择性重算也只是把「一个看起来顺手的 checkpoint 边界」往里挪了一点点，但加起来效果却非常惊人。这让我在审视自己训练栈时，会特别去找那些「被无谓复制」「算得很快但占很多内存」的模块，尝试用类似的思路做优化。</p></li>
+</ol>
+<p>未来在自己的实践中，我会优先考虑：</p>
+<ul>
+<li>在现有 Megatron / DeepSpeed 风格框架中，启用或复刻论文中的序列并行路径；</li>
+<li>在注意力子图上实现更细粒度的选择性 checkpoint，而不是简单地对整层做重算；</li>
+<li>把目前用于 tracing 的 Stream/Task/Event 仿真脚本与这套激活内存模型结合起来，做更系统的配置搜索与可视化。</li>
+</ul>
+<blockquote>
+<p>总体来看，这篇论文并不是在算法层面提出颠覆性的新结构，而是用非常扎实的系统分析与小而巧的工程改造，显著降低了大模型训练中对激活重计算的依赖，在当前大规模 Transformer 生态下具有很高的实用价值，尤其适合正在推进超大模型训练基础设施的工程团队深入阅读与借鉴。 ```</p>
+</blockquote>
+<p>【参考文献与来源】</p>
+<ul>
+<li>Korthikanti, V. et al., <em>Reducing Activation Recomputation in Large Transformer Models</em>, MLSys 2023.</li>
+<li>Li, S. et al., <em>Sequence Parallelism: Long Sequence Training from System Perspective</em>, ACL 2023.</li>
+<li>Rajbhandari, S. et al., <em>ZeRO: Memory Optimizations Toward Training Trillion Parameter Models</em>, SC 2020.</li>
+<li>Rajbhandari, S. et al., <em>ZeRO-Infinity: Breaking the GPU Memory Wall for Extreme Scale Deep Learning</em>, SC 2021.</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/paper/" rel="tag"># paper</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2025/11/23/paper/efficient_large_scale/" rel="prev" title="Efficient Large-Scale Language Model Training on GPU Clusters Using Megatron-LM">
+      <i class="fa fa-chevron-left"></i> Efficient Large-Scale Language Model Training on GPU Clusters Using Megatron-LM
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E8%AE%BA%E6%96%87%E9%80%9F%E8%A7%88"><span class="nav-number">1.</span> <span class="nav-text">一、论文速览</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E8%AE%BA%E6%96%87%E7%BB%93%E6%9E%84"><span class="nav-number">2.</span> <span class="nav-text">二、论文结构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E6%96%B9%E6%B3%95%E4%B8%8E%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1"><span class="nav-number">3.</span> <span class="nav-text">三、方法与系统设计</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A0%B8%E5%BF%83%E6%A8%A1%E5%9D%97%E4%B8%80%E8%A7%88"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 核心模块一览</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E6%B5%81%E4%B8%8E%E6%8E%A7%E5%88%B6%E6%B5%81"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 数据流与控制流</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%85%B3%E9%94%AE%E5%81%87%E8%AE%BE%E4%B8%8E%E9%80%82%E7%94%A8%E8%8C%83%E5%9B%B4"><span class="nav-number">3.3.</span> <span class="nav-text">3.3 关键假设与适用范围</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%95%B0%E5%AD%A6%E5%85%AC%E5%BC%8F%E4%B8%8E%E7%AE%97%E6%B3%95%E8%A7%A3%E8%AF%BB"><span class="nav-number">3.4.</span> <span class="nav-text">3.4 数学公式与算法解读</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8D%95%E5%B1%82%E6%BF%80%E6%B4%BB%E5%86%85%E5%AD%98%E6%97%A0%E5%B9%B6%E8%A1%8C%E5%85%AC%E5%BC%8F-1"><span class="nav-number">3.4.1.</span> <span class="nav-text">3.4.1 单层激活内存（无并行）——公式 (1)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8A%A0%E5%85%A5%E5%BC%A0%E9%87%8F%E5%B9%B6%E8%A1%8C%E5%90%8E%E7%9A%84%E5%8D%95%E5%B1%82%E5%86%85%E5%AD%98%E5%85%AC%E5%BC%8F-2"><span class="nav-number">3.4.2.</span> <span class="nav-text">3.4.2 加入张量并行后的单层内存——公式 (2)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%BC%A0%E9%87%8F%E5%B9%B6%E8%A1%8C-%E5%BA%8F%E5%88%97%E5%B9%B6%E8%A1%8C%E5%85%AC%E5%BC%8F-4"><span class="nav-number">3.4.3.</span> <span class="nav-text">3.4.3 张量并行 + 序列并行——公式 (4)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%80%89%E6%8B%A9%E6%80%A7%E6%BF%80%E6%B4%BB%E9%87%8D%E8%AE%A1%E7%AE%97%E5%90%8E%E7%9A%84%E6%80%BB%E6%BF%80%E6%B4%BB%E5%86%85%E5%AD%98%E5%85%AC%E5%BC%8F-56-%E6%A6%82%E5%BF%B5%E7%89%88"><span class="nav-number">3.4.4.</span> <span class="nav-text">3.4.4 选择性激活重计算后的总激活内存——公式 (5)&#x2F;(6) 概念版</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E5%BB%BA%E6%A8%A1%E6%96%B9%E5%BC%8F%E4%B8%8E%E8%AF%84%E4%BC%B0%E6%8C%87%E6%A0%87"><span class="nav-number">4.</span> <span class="nav-text">四、建模方式与评估指标</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E6%98%AF%E5%A6%82%E4%BD%95%E5%BD%A2%E5%BC%8F%E5%8C%96%E7%9A%84"><span class="nav-number">4.1.</span> <span class="nav-text">4.1 问题是如何形式化的？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A0%B8%E5%BF%83%E8%AF%84%E4%BC%B0%E6%8C%87%E6%A0%87"><span class="nav-number">4.2.</span> <span class="nav-text">4.2 核心评估指标</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E4%B8%BB%E8%A6%81%E5%AE%9E%E9%AA%8C%E5%8F%91%E7%8E%B0"><span class="nav-number">5.</span> <span class="nav-text">五、主要实验发现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%85%B3%E9%94%AE%E5%9B%BE%E8%A1%A8%E8%A7%A3%E8%AF%BB"><span class="nav-number">5.1.</span> <span class="nav-text">5.1 关键图表解读</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E4%BC%98%E7%82%B9%E4%B8%8E%E5%B1%80%E9%99%90"><span class="nav-number">6.</span> <span class="nav-text">六、优点与局限</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E4%B8%9A%E5%86%85%E7%9B%B8%E5%85%B3%E5%B7%A5%E4%BD%9C%E5%AF%B9%E6%AF%94"><span class="nav-number">7.</span> <span class="nav-text">七、业内相关工作对比</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%AA%E4%BA%BA%E8%A7%82%E7%82%B9"><span class="nav-number">7.1.</span> <span class="nav-text">7.1 个人观点</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E5%9C%A8%E5%AE%9E%E9%99%85%E8%AE%AD%E7%BB%83%E6%A0%88%E4%B8%AD%E5%A6%82%E4%BD%95%E8%90%BD%E5%9C%B0"><span class="nav-number">8.</span> <span class="nav-text">八、在实际训练栈中如何落地？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E5%80%BC%E5%BE%97%E8%BF%9B%E4%B8%80%E6%AD%A5%E6%8E%A2%E7%B4%A2%E7%9A%84%E7%A0%94%E7%A9%B6%E6%96%B9%E5%90%91"><span class="nav-number">9.</span> <span class="nav-text">九、值得进一步探索的研究方向</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1%E6%80%9D%E7%BB%B4%E9%93%BE"><span class="nav-number">10.</span> <span class="nav-text">十、知识图谱思维链</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%AA%E4%BA%BA%E6%94%B6%E8%8E%B7%E4%B8%8E%E5%8F%8D%E6%80%9D"><span class="nav-number">10.1.</span> <span class="nav-text">10.1 个人收获与反思</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">PePe</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">14</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+        <span class="site-state-item-count">9</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">浙ICP备2024078386号 </a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">PePe</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/medium-zoom@1/dist/medium-zoom.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+<script defer src="https://events.vercount.one/js"></script>
+
+</body>
+</html>
