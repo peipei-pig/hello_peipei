@@ -28,7 +28,7 @@
 <meta property="og:description" content="Megatron-LM 三维并行实践解析">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2025-11-23T03:46:23.981Z">
-<meta property="article:modified_time" content="2025-11-23T03:48:17.829Z">
+<meta property="article:modified_time" content="2025-11-23T06:12:21.077Z">
 <meta property="article:author" content="PePe">
 <meta property="article:tag" content="paper">
 <meta name="twitter:card" content="summary">
@@ -233,7 +233,7 @@
               <span class="post-meta-item-text">Posted on</span>
               
 
-              <time title="Created: 2025-11-23 11:46:23 / Modified: 11:48:17" itemprop="dateCreated datePublished" datetime="2025-11-23T11:46:23+08:00">2025-11-23</time>
+              <time title="Created: 2025-11-23 11:46:23 / Modified: 14:12:21" itemprop="dateCreated datePublished" datetime="2025-11-23T11:46:23+08:00">2025-11-23</time>
             </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -385,9 +385,9 @@
 </ul>
 <p>则：</p>
 <ul>
-<li>批处理的理想计算时间为 [ t_{} = m (t_f + t_b)]</li>
-<li>pipeline bubble 的时间为 [ t_{} = (p - 1)(t_f + t_b)]</li>
-<li>bubble 占理想时间的比例为 <a href="%5Bpeople.eecs.berkeley.edu%5D%5B2%5D"> =  = .</a></li>
+<li>批处理的理想计算时间为 $ t_{} = m (t_f + t_b) $</li>
+<li>pipeline bubble 的时间为 $ t_{} = (p - 1)(t_f + t_b) $</li>
+<li>bubble 占理想时间的比例为 $  =  = . $(<a target="_blank" rel="noopener" href="https://people.eecs.berkeley.edu/~matei/papers/2021/sc_megatron_lm.pdf">people.eecs.berkeley.edu</a>)</li>
 </ul>
 <p><strong>含义与直观理解</strong></p>
 <ul>
