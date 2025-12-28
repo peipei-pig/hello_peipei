@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 7.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yaopepe.com","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"post","display":"post","padding":18,"offset":12,"onmobile":false,"width_dual_column":240},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":true,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.json"};
+  </script>
+
+  <meta name="description" content="减少大模型训练中的能源浪费：Perseus 系统详解">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Reducing Energy Bloat in Large Model Training">
+<meta property="og:url" content="https://yaopepe.com/2025/12/28/paper/reducing_energy/index.html">
+<meta property="og:site_name" content="果冻甜甜的">
+<meta property="og:description" content="减少大模型训练中的能源浪费：Perseus 系统详解">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-12-28T07:36:30.100Z">
+<meta property="article:modified_time" content="2025-12-28T07:41:35.669Z">
+<meta property="article:author" content="PePe">
+<meta property="article:tag" content="paper">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://yaopepe.com/2025/12/28/paper/reducing_energy/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Reducing Energy Bloat in Large Model Training | 果冻甜甜的</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">果冻甜甜的</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-首页">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-分类">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-标签">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-归档">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-关于">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+<div class="site-meta-counts" style="font-size:.9em;opacity:.85;margin-top:.25rem;display:flex;gap:.75rem;flex-wrap:wrap">
+  <span class="post-meta-item">
+    <i class="fa fa-eye"></i>
+    <span class="post-meta-item-text">总访问量</span>
+    <span id="vercount_value_site_pv">0</span>
+  </span>
+
+  <span class="post-meta-item">
+    <i class="fa fa-file"></i>
+    <span class="post-meta-item-text">总文章数</span>
+    <span id="total_posts_count">16</span>
+  </span>
+</div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yaopepe.com/2025/12/28/paper/reducing_energy/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="PePe">
+      <meta itemprop="description" content="做正确的事">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="果冻甜甜的">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Reducing Energy Bloat in Large Model Training
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2025-12-28 15:36:30 / 修改时间：15:41:35" itemprop="dateCreated datePublished" datetime="2025-12-28T15:36:30+08:00">2025-12-28</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%AE%BA%E6%96%87%E9%98%85%E8%AF%BB/" itemprop="url" rel="index"><span itemprop="name">论文阅读</span></a>
+                </span>
+            </span>
+
+          
+
+<span class="post-meta-item">
+  <span class="post-meta-item-icon"><i class="fa fa-eye"></i></span>
+  <span class="post-meta-item-text">Views:</span>
+  <span id="vercount_value_page_pv">0</span>  
+</span>
+
+
+            <div class="post-description">减少大模型训练中的能源浪费：Perseus 系统详解</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <span id="more"></span>
+<hr />
+<p>原文：Reducing Energy Bloat in Large Model Training · <a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2312.06902">arXiv</a></p>
+<!-- toc -->
+<h2 id="一论文速览">一、论文速览</h2>
+<p>该论文旨在解决<strong>大规模模型训练中的能源浪费问题</strong>。作者指出在多 GPU 分布式训练中，并非所有耗费的能量都用于提高吞吐率，其中有相当一部分能耗<strong>对训练速度没有贡献</strong>，称之为“能耗冗余（energy bloat）”。为此，论文提出了一个纯软件方法 <strong>Perseus</strong>：通过对训练过程建立时间-能量模型，并利用图割算法优化每个计算阶段的速度，<strong>在不降低训练吞吐的前提下减少多达 30% 的能耗</strong>。实验结果表明，该方法无需定制硬件即可实现显著节能，同时保持模型训练时间基本不变。</p>
+<h2 id="二论文结构">二、论文结构</h2>
+<ol type="1">
+<li><strong>背景与动机（Introduction &amp; Motivation）</strong>：介绍大模型训练的能耗现状，并定义了“能耗冗余”的概念，包括<strong>内在型</strong>（流水线阶段不均衡导致）和<strong>外在型</strong>（同步并行中的慢管线导致）两个来源。通过对GPT-3等模型的分析，说明这些能耗浪费的存在和优化空间。</li>
+<li><strong>Perseus 方法概览（Perseus Overview）</strong>：提出 Perseus 系统的总体思路。首先给出统一的优化框架，将去除内在和外在能耗冗余形式化为<strong>时间-能量优化问题</strong>；然后介绍 Perseus 的架构，包括训练框架中的客户端和独立的服务器组件，以及其工作流程。</li>
+<li><strong>优化算法与实现（Optimization Algorithm &amp; Implementation）</strong>：详细描述论文的核心算法。作者证明直接求解最佳时间-能量折中方案是 NP-难的，因此采用<strong>松弛处理和图割算法</strong>高效寻找接近最优的方案。该部分还介绍了 Perseus 系统如何与现有训练框架集成、对每个计算阶段进行<strong>能耗测量</strong>和<strong>频率控制</strong>的具体实现细节。</li>
+<li><strong>实验设计与结果（Evaluation）</strong>：介绍实验环境和评估指标（如单迭代能耗、训练速度、能耗降低比等），并给出在 GPT-3、BERT、T5、Bloom 等多种大型模型上的实验结果。包括无慢节点情况下的<strong>内在能耗冗余去除效果</strong>，以及模拟慢节点出现时<strong>外在能耗冗余降低</strong>的效果对比。</li>
+<li><strong>相关工作与结论（Related Work &amp; Conclusion）</strong>：对比 Perseus 与之前的能耗优化方案（如 Zeus、EnvPipe 等）的异同，强调本研究的<strong>软件优先</strong>和<strong>通用性</strong>优势，并总结了论文的主要贡献和对未来可持续训练的意义。</li>
+</ol>
+<blockquote>
+<p><strong>核心思想：</strong> 大规模模型训练中存在显著的能源浪费（因流水线不平衡和慢节点等待）。Perseus 系统通过构建训练迭代的有向无环图模型，应用图割优化算法精确减缓非关键路径计算速度，实现了<strong>在不影响训练进度的情况下</strong>尽可能降低能耗，为 AI 训练带来了硬件无关的节能增益。</p>
+</blockquote>
+<h2 id="三方法与系统设计">三、方法与系统设计</h2>
+<p>Perseus 的整体设计围绕一个核心思想：<strong>根据训练迭代中各计算任务的重要程度，调整其执行速度以节省能耗</strong>。为此，作者需要解决以下子问题： - <strong>识别与量化能耗冗余</strong>：如何找到流水线中哪些阶段或算子执行得“过快”而无益于总耗时？ - <strong>自动化减速策略规划</strong>：如何决定对哪些计算降低速率、降低多少，才能既减少能耗又不延长训练迭代时间？ - <strong>应对慢节点（straggler）</strong>：当并行的某一条训练流水线意外变慢时，怎样动态调整其他流水线的速度以避免能源浪费？ - <strong>系统集成与开销</strong>：如何将上述优化嵌入现有训练框架，并将额外的能耗测量和控制开销降至最低？</p>
+<h3 id="核心模块一览">3.1 核心模块一览</h3>
+<ul>
+<li><strong>Perseus 客户端库</strong>：嵌入在训练框架中，负责在每次迭代中对各个<strong>前向/后向计算</strong>步骤进行计时和能耗测量，并通过驱动接口动态控制 GPU 的执行频率。它相当于训练流程中的传感器和执行器，用于采集能耗数据并调整计算速度。</li>
+<li><strong>Perseus 服务器</strong>：独立运行的优化服务。它接收客户端上传的计算图结构和测量数据，运行优化算法生成<strong>能量调度方案</strong>（energy schedule）。方案包含每个计算节点应该以何种速度执行。服务器还负责监控训练过程中是否出现慢节点，并在需要时<strong>切换能量方案</strong>应对。</li>
+<li><strong>时间-能量前沿优化器</strong>：Perseus 服务器内的算法模块。针对训练迭代的有向无环图 (DAG) 模型，计算所有可能的<strong>时间-能耗折中帕累托前沿</strong>。它运用高效的图割算法，从“全速运行”（最短时间、最高能耗）开始，逐步枚举到“尽量节能”（最长允许时间、最低能耗）之间的一系列最优方案，为后续决策提供全集。</li>
+<li><strong>在线监测与调整机制</strong>：当集群监控或客户端检测到某一流水线变慢（例如因过热降频或I/O卡顿），此模块将及时通知 Perseus 服务器。服务器据此从预先算好的前沿方案中挑选匹配当前较长迭代时间的方案，下发给客户端执行，<strong>让其他节点放慢步调以省电</strong>。</li>
+</ul>
+<h3 id="数据流与控制流">3.2 数据流与控制流</h3>
+<ol type="1">
+<li><strong>初始化配置</strong>：在训练开始时，用户在<strong>训练脚本</strong>中启用 Perseus，并提供模型的分布式并行配置（数据并行度、流水线分段、张量并行等）。Perseus 客户端据此构建该模型<strong>单次迭代的计算 DAG</strong>，将每个前向和后向子任务作为节点。服务器记录下 DAG 结构。</li>
+<li><strong>基准剖析</strong>：正式训练前，Perseus 客户端对每个流水线阶段进行一次<strong>Profiling 剖析</strong>。它会令各阶段以默认最高频率运行一个迭代，测量每个节点（算子块）的执行时间和能耗（通过 GPU 功耗计数器）。这些测量值发送给 Perseus 服务器。</li>
+<li><strong>离线优化</strong>：Perseus 服务器将 DAG 和测量数据作为输入，运行<strong>时间-能量前沿优化算法</strong>。该算法寻找在不同迭代时间限制下的最小能耗方案，并输出一系列可能的“频率计划”（即哪个计算节点用高频，哪个降频）。</li>
+<li><strong>方案下发</strong>：服务器选择其中<strong>迭代时间等于基准最快时间</strong>的方案（即不降低吞吐但能耗最低的组合）作为初始运行计划，发送给客户端。这个计划告诉每个 GPU 的客户端在<strong>执行每个具体计算时应使用的频率</strong>。</li>
+<li><strong>迭代执行</strong>：训练正式开始，各 GPU 按照计划调整频率执行每个前向/后向计算。Perseus 客户端在后台持续<strong>监控实际用时</strong>，确保各阶段没有因降频而拖慢整体进度。如果发现偏差，可以提示服务器优化。</li>
+<li><strong>慢节点应对</strong>：若在某次迭代中检测到某一数据并行分组耗时异常增长（慢节点出现），Perseus 客户端或集群管理会<strong>发出警报</strong>，告知服务器该迭代预计耗时 𝑇′ 长于正常。服务器随即查找预计算的前沿中<strong>对应 𝑇′ 的能耗最优方案</strong>，并在下一个迭代将此新方案下发客户端。</li>
+<li><strong>动态调整</strong>：收到新方案后，其它非慢节点的 GPU 客户端将在后续迭代中采用更低频率执行部分计算，使自身迭代时间放慢接近 𝑇′。这样一来，所有并行流水线几乎同步完成，<strong>避免了原本会等待慢节点的那些 GPU 白白烧能耗</strong>。</li>
+<li><strong>持续训练与收敛</strong>：在整个训练过程中，Perseus 不断重复上述监测和优化。正常情况下系统一直以节能方案运行；如慢节点情况消失（例如冷却后性能恢复），服务器可再次选用更快的方案。训练完成时，各节点的总能耗显著降低，但总耗时几乎与未启用 Perseus 时相同。</li>
+</ol>
+<h3 id="关键假设与适用范围">3.3 关键假设与适用范围</h3>
+<ol type="1">
+<li><strong>迭代流程稳定可建模</strong>：假设模型每次迭代执行的计算图是固定的（例如每步前向后向操作序列相同）。这使得 Perseus 可以用一次 Profiling 构建可靠的 DAG 模型。如果训练过程中模型计算发生频繁变化（如可变序列长度、动态网络结构），则预先优化的方案可能失效，需重新分析，会增加开销。</li>
+<li><strong>GPU 频率可调且能耗单调</strong>：Perseus 假设所用 GPU 支持多个离散频率/功率状态，并且降低核心频率能降低功耗且不会出现反直觉的性能异常（例如没有频率降低却功耗不降的情况）。若硬件不支持 DVFS 或频率与能耗关系不稳定，则该方法无法正常工作。</li>
+<li><strong>存在计算不平衡和偶发慢卡</strong>：方法假定实际训练中<strong>确实存在</strong>可优化的能耗冗余，例如流水线各阶段负载不均、部分迭代出现慢卡等。如果训练任务本身已经非常平衡（每个阶段耗时几乎相等）且从无慢卡出现，那么 Perseus 的节能空间会很有限（只有很小的能耗改善，且 Profiling 等带来的额外复杂度未必值得）。</li>
+<li><strong>同阶段 GPU 性能一致</strong>：针对张量并行等场景，Perseus 假设每个流水线阶段内的各 GPU 拥有相似的性能特性。实际应用中通常多卡是同型号、执行相同操作，这一假设成立。因此只需<strong>剖析每个阶段的一台代表 GPU</strong>即可，将计算计划复制到该阶段其他 GPU 上。如果同一阶段存在硬件差异或负载差异，用一个代表可能不准，方案效果会下降。</li>
+<li><strong>外部慢节点可被及时检测</strong>：Perseus 倚赖系统能够快速获知某节点的异常变慢（例如 GPU 被操作系统降频或网络堵塞）。假如慢节点未被及时发现并通知，那么其他节点仍会高速运行并等待，从而继续浪费能量。所幸很多集群都有监控温度/功耗的机制，可用于及时触发 Perseus 的调整。</li>
+</ol>
+<h3 id="数学公式与算法解读">3.4 数学公式与算法解读</h3>
+<p>论文的方法部分基于一个<strong>能耗优化模型</strong>，它将每次训练迭代视为一组有先后依赖的计算任务。下面是作者提出的核心优化目标的数学描述：</p>
+<p>原文中的公式：设训练迭代的计算图包含 <span class="math inline">\(n\)</span> 个计算节点，每个节点 <span class="math inline">\(i\)</span> 有两种执行模式：高频（快速）和低频（节能）。记 <span class="math inline">\(t_i(H), t_i(L)\)</span> 为两种模式下节点的执行时间，<span class="math inline">\(e_i(H), e_i(L)\)</span> 为对应的能量消耗。给定一个迭代时间上限 <span class="math inline">\(T\)</span>（不慢于此时间完成迭代），我们的目标是：</p>
+<p><span class="math display">\[
+\min_{x_1,...,x_n \in \{H,L\}} \sum_{i=1}^{n} e_i(x_i) \quad
+\text{s.t. 对于计算图中的每一条从起点到终点的路径 } p: \sum_{i \in p} t_i(x_i) \le T.
+\]</span></p>
+<p>这一定式表达了<strong>在不超过给定迭代时长 <span class="math inline">\(T\)</span> 的前提下，最小化总能耗</strong>。其中约束意味着：无论计算图的哪条路径（即流水线中哪串先后执行的操作）都不能超时 <span class="math inline">\(T\)</span>，否则就违反了总时间限制。<span class="math inline">\(x_i\)</span> 是决策变量，表示第 <span class="math inline">\(i\)</span> 个计算节点采用高频 (H) 还是低频 (L) 模式。</p>
+<p>逐步解释符号和含义：上式求和项是所有计算节点在所选模式下的能量消耗之和，也是我们要最小化的总能耗。路径时间约束确保任何一条关键路径的累计执行时间不超过 <span class="math inline">\(T\)</span>，换言之，<strong>总迭代时间受最慢的一条流水线路径决定</strong>，我们必须让它不变长。通过选择一些节点降频，我们可以减少能耗，但如果该节点位于关键路径上就会增加总时间，因此只有不在关键路径（或关键路径有富余）的节点才能降频。</p>
+<p>直观版理解：以上优化相当于<strong>背包问题</strong>的变体：每个计算节点降频可以“节省”一定能耗，但会“花费”一些额外时间。如果某节点不在关键路径上，那么它本来就有空闲时间可以利用，降频相当于用掉这部分空闲而不影响总体时间。我们的目标是在不给训练造成延迟的情况下，挑选一组节点降频，最大化节省的能耗。对于同步慢节点场景，上述 <span class="math inline">\(T\)</span> 将增大（由慢节点决定更大的迭代时间），则允许其他节点有更多降频余地，我们可以对更多节点降频来节约能源。</p>
+<p>作者提出的图割算法正是用来高效求解上述问题的松弛版本。简言之，他们将计算图转化为一个带容量权重的<strong>网络流模型</strong>，其中切割网络相当于决定哪些节点以高频、哪些以低频运行。通过<strong>最小割/最大流算法</strong>（如 Edmonds-Karp），可以在多项式时间内找到满足时间约束下能耗最小的降频方案。算法会迭代多次，每次把全局迭代时间 <span class="math inline">\(T\)</span> 缩短一个小增量 <span class="math inline">\(\tau\)</span>，重新求最小割，从而逐步探索整条时间-能量帕累托前沿曲线。当无法再缩短而不违反约束时，就找到了最短时间 <span class="math inline">\(T_{min}\)</span> 方案；反之最放松约束可达到最低能耗方案 <span class="math inline">\(T_{max}\)</span>。Perseus 将这些解离散地存储，供运行时快速查表使用。</p>
+<p><strong>与常见训练栈的对应关系</strong>： - 上述模块对应于大规模训练系统中的各层面：Perseus 客户端类似于在 <strong>训练框架内部</strong>（如 Megatron-LM 或 DeepSpeed）增加一个性能监控与调速模块，它钩住了各个算子/层的执行；Perseus 服务器相当于在 <strong>调度层</strong> 增加一个全局优化服务，决定各卡的速度策略。 - 时间-能量前沿优化器可以看作训练 pipeline 调度算法的扩展，与通常的 <strong>流水并行/微批调度</strong> 结合在一起：传统调度关注负载均衡和流水线气泡，而 Perseus 则在此基础上增加了<strong>DVFS 调度</strong>维度来降低能耗。 - GPU 频率控制涉及到底层 <strong>硬件与驱动</strong>：相当于对 GPU 内核时钟（类似于 kernel 级别操作）进行调节。一般训练栈很少触及这一层，但 Perseus 通过标准驱动接口（如 NVIDIA 管理库 NVML）来实现，与框架本身解耦。 - 对于 <strong>数据并行</strong> 的慢节点检测，Perseus 利用了集群监控或分布式训练的同步屏障机制：这类似于在分布式优化器中加入了一个 <strong>通信协调</strong> 组件，一旦发现同步等待时间异常增大，就触发频率计划调整。 - 整体而言，Perseus 横跨了训练栈的多个层次：上接训练框架（负责插桩和执行策略），下探硬件驱动（负责能耗控制），属于系统与硬件协同优化范畴，但又完全以软件形式部署，方便集成到现有大模型训练管线中。</p>
+<h2 id="四建模方式与评估指标">四、建模方式与评估指标</h2>
+<h3 id="问题是如何形式化的">4.1 问题是如何形式化的？</h3>
+<p>作者将<strong>能耗优化</strong>目标形式化为上节提到的时间-能量优化问题。其核心是在<strong>训练迭代的 DAG 模型</strong>上做选择：哪些算子以低功耗模式执行、哪些维持高速模式，以最小化总能耗且不超出给定迭代时间上限。也就是说，优化器需要找到<strong>训练时间 <span class="math inline">\(T\)</span> 与总能耗 <span class="math inline">\(E\)</span> 的帕累托最优组合</strong>。当没有慢节点时，这个上限 <span class="math inline">\(T\)</span> 就是原始最快迭代时间；如果出现慢节点导致某次迭代时间变为 <span class="math inline">\(T&#39; &gt; T_{min}\)</span>，则 <span class="math inline">\(T\)</span> 改为 <span class="math inline">\(T&#39;\)</span>。在此约束下，模型会近似地将问题转化为一个<strong>0-1 决策问题</strong>（每个节点降频与否），并通过图割/流网络的方法高效搜索满足条件的解。值得注意的是，论文证明直接求全局最优帕累托前沿是 NP-困难的，因此他们采用了上述松弛 + 迭代的方法来逼近求解。</p>
+<p>在建模过程中，作者做了一些简化假设：例如，将 GPU 频率控制离散为有限的几档（通常只考虑最高和最低两档，或几档典型频率）而非连续变量；将通信等待视为固定耗时操作节点（不能缩短，只能通过降频填充）；假定每次迭代中慢节点的影响可以通过设定一个新的统一迭代时间来处理。这些简化使问题易于计算，但也意味着某些更细粒度的动态（如频率连续调节、慢节点的临时抖动）未被直接建模。</p>
+<h3 id="核心评估指标">4.2 核心评估指标</h3>
+<p>论文为了验证 Perseus 的效果，采用了多方面的指标来评估： - <strong>单迭代能量消耗（Joule）</strong>：每完成一次训练迭代消耗的能量，通常通过累积 GPU 实时功率得到。这个指标直接体现了能耗优化的成果——Perseus 希望降低每迭代能耗，同时不影响别的指标。 - <strong>训练吞吐/迭代时长</strong>：通常以每步迭代所需的时间（秒）或每秒处理的样本数来表示。保持吞吐不下降是关键目标，因此会比较启用 Perseus 前后的迭代时间变化。如果<strong>慢节点场景</strong>下必然变慢，则关注 Perseus 是否避免额外放慢其它节点。 - <strong>能耗节省比例</strong>：相对于 baseline 未优化时的能耗下降百分比。例如“能耗降低 20%”等。这汇总了节能效果，分内在型（无慢节点时）和外在型（有慢节点时额外节能）两种情形报告，说明 Perseus 对不同场景的贡献。 - <strong>平均功率降低</strong>：训练过程中 GPU 的平均功率（瓦特）。这从供电视角评估，Perseus 通过降低不必要功耗，能把 GPU 平均功率限制在较低水平，有助于缓解数据中心供电瓶颈。平均功率 = 能耗/时间，因此该指标与前两个密切相关。 - <strong>系统开销</strong>：包括 Profiling 阶段耗时、优化算法运行时间等。虽然不是主要性能指标，但论文报告了这些数值以证明 Perseus 带来的额外时间开销很小（例如剖析十几分钟，相比长达数天的训练可以忽略不计）。 - <strong>负载不平衡度</strong>（背景指标）：论文还列举了各模型在不同并行配置下的<strong>流水线不平衡比</strong>，即最长 stage 时间与最短 stage 时间之比。这不是算法效果指标，但能说明不同模型的先天不平衡程度如何影响节能空间（不平衡越大，潜在节能越多）。</p>
+<h2 id="五主要实验发现">五、主要实验发现</h2>
+<ul>
+<li><strong>无吞吐损失的能耗降低</strong>：在没有慢节点的正常训练中，Perseus 对多种模型都实现了明显的节能而<strong>几乎不增加训练时间</strong>。例如，在 GPT-3、BERT、T5 等模型上，每步迭代能耗平均降低约 10%~20%，而迭代耗时变化在 1% 以内，达到“零成本省电”的理想效果。</li>
+<li><strong>应对慢节点效果显著</strong>：模拟数据并行的某一 GPU 降速（比如温度过高降频）场景下，Perseus 能让其他 GPU 自动降速，与慢卡保持同步，<strong>几乎消除额外的能源浪费</strong>。实验显示，当出现 10% 的迭代变慢时，其余 GPU 跟随降频可回收约 70% 以上本可浪费的能量。</li>
+<li><strong>优于既有方案</strong>：与此前的能耗优化策略相比，Perseus 的效果更全面。相较只处理流水线不平衡的 EnvPipe，Perseus 在相同模型上节能效果提升一倍以上；而相较专注单 GPU 功耗调节的 Zeus，Perseus 在多 GPU 场景下达到了更低的能耗-时间折中曲线，<strong>Pareto 前沿全面占优</strong>。</li>
+<li><strong>适用于多种模型和硬件</strong>：实验覆盖了 Transformer 语言模型、卷积网络等，规模从十亿到千亿参数，GPU 包括 A100 和 A40 等。结果表明 Perseus <strong>普遍有效</strong>：对于不同架构和硬件都能带来可观的节能。特别地，GPU 支持的频率范围越广（如 A40），节能潜力越大。</li>
+<li><strong>系统开销可忽略</strong>：Perseus 在训练初期花费少量时间剖析和计算优化方案（几十秒到十几分钟不等），但相对于总训练时长（常常数小时到数天）来说占比极小。运行过程中对通信和计算的额外延迟也微乎其微，没有引入明显的同步开销。</li>
+</ul>
+<h3 id="关键图表解读">5.1 关键图表解读</h3>
+<ul>
+<li><strong>多模型内在节能效果表</strong>：论文提供了一个表格，对比了不同模型在无慢节点时使用 Perseus 的能耗降低比例和迭代时间变化。例如，GPT-3 1.3B 在 4 卡流水线上能耗降低约 13%，迭代仅慢 0.8%；BERT 1.3B 节能 16%，几乎无慢化。而一些本身平衡度很高的模型（如经过特殊划分的 Wide-ResNet）节能只有 2%~3%。这一表格证明了 Perseus 在典型不平衡的大模型上效果显著，且代价几乎为零。</li>
+<li><strong>时间-能量帕累托曲线</strong>：如论文的图9所示，不同方案的能耗-时间关系曲线清晰地表明 Perseus 的方案整体优于基线。横轴为每步迭代时间，纵轴为能耗；Perseus 的曲线在 Zeus 衍生基线之下，表示在任意给定训练时间要求下，Perseus 都能以更低的能耗完成训练。这验证了其优化算法在全局上的优势。</li>
+<li><strong>慢节点场景能耗随延迟曲线</strong>：另一个重要图表展示了在某一模型上引入不同程度的慢节点（例如迭代时间比正常增加 5%、10%、20%）时，Perseus 实现的能耗节省比例。结果显示，随着慢节点变慢，Perseus 可节省的能量先增加后趋于饱和。例如，当慢节点让迭代变慢 10% 时，能耗降低率可能达到 20%以上；但如果慢很多（超过前沿曲线最节能点），其余节点即使全降至最低频率，也无法进一步节能。这个图佐证了算法对外在能耗冗余的处理能力及其极限。</li>
+</ul>
+<p><strong>结果解读与边界</strong>：总体而言，这些实验结果有力地支持了论文的核心结论——<strong>软件优化能大幅提升大模型训练的能源效率</strong>。在各种测试场景下，Perseus 都成功减少了能耗且几乎不影响性能，证明了其通用性和有效性。不过，需要注意以下几点边界： - 实验主要在单次迭代和固定模型配置上评估，没有完整覆盖<strong>整个训练过程中的变化</strong>。例如，随着模型训练进行，可能出现负载变化或多次慢节点波动，Perseus 在长期训练中的稳定性尚需进一步验证。 - 论文侧重于<strong>GPU 核心频率</strong>的调节，对其他可能的节能手段（如内存频率调节、算子混合精度等）没有涉及。这意味着结果的改进完全归功于 DVFS，但也留下了进一步组合优化的空间。 - 实验环境相对可控，模拟的慢节点用可知的减速比例。在真实集群中，慢节点的<strong>发生随机性</strong>和<strong>检测滞后</strong>可能影响 Perseus 的及时响应效果，需要实际部署检验。 - 此外，Perseus 假定模型划分已有合理优化（尽量平衡），然后在此基础上降频节能。如果模型划分极不合理或者通信成为主要瓶颈，<strong>能耗冗余的模式</strong>可能不同，Perseus 的效果也可能打折，需要和其它优化（如重新划分、加大微批数）配合考虑。</p>
+<h2 id="六优点与局限">六、优点与局限</h2>
+<p><strong>亮点（Strengths）：</strong> - <em>研究问题</em>：聚焦于大模型训练的能源效率这一<strong>紧迫且实际的问题</strong>，提出了“能耗冗余”这一新颖概念，将以往少被关注的能量浪费现象系统化地揭示出来。 - <em>方法设计</em>：提出了统一框架同时解决内在和外在两类能耗浪费，且采用<strong>纯软件方案</strong>（动态调节 GPU 频率）实现，无需硬件改造，具有很强的<strong>通用性</strong>和可部署性。 - <em>算法与理论</em>：将问题形式化为图优化，并用图割算法找到时间-能量最优解，方法上<strong>巧妙地将复杂优化问题转化为网络流求解</strong>，理论严谨且效率高。同时证明了直接求解的难度和采用松弛算法的合理性。 - <em>实验设计</em>：评估全面，涵盖不同模型类型、模型规模和硬件平台，既有<strong>现实训练</strong>（GPT-3 等）的实验，也有<strong>仿真推演</strong>（放大到千卡规模）的结果，论证充分。 - <em>结果与写作</em>：实验结果说服力强，成功实现了显著节能且基本无性能损失的目标。论文行文清晰，层次分明，对概念（如两类能耗冗余）的解释和图表示例都帮助读者理解关键思想。</p>
+<p><strong>局限（Limitations）：</strong> - <em>研究问题</em>：当前聚焦于<strong>同步并行</strong>的深度学习训练场景，对于异步训练或其他非同步范式（如参数服务器架构）不一定适用，因为能耗冗余的模式可能不同。 - <em>方法设计</em>：Perseus 强依赖 GPU 的 DVFS 能力，在<strong>硬件依赖</strong>上有一定局限。如果部署环境不允许用户态调节频率或者硬件频率范围有限，方法效果会受限。此外，它假定了计算图稳定重复，这对于某些包含动态逻辑的模型并不成立。 - <em>算法实现</em>：虽然算法整体高效，但涉及<strong>跨模块集成</strong>（框架、驱动、调度）的工程复杂度较高。实际落地需要改动训练框架内部，增加能耗监控，可能带来一定调试和维护成本。 - <em>实验验证</em>：论文中的实验多为<strong>单任务</strong>场景，且假设慢节点出现时系统可以立即响应。在现实多任务集群中，多个训练作业竞争资源，慢节点成因更复杂，Perseus 如何与集群调度器协同、在多任务下保持优势尚未有深入讨论。 - <em>结论解读</em>：论文强调“无性能损失”，但严格来说在部分配置下还是存在极小的延迟（如 0.x% 的迭代变慢）。这些开销虽可以忽略，但在极致追求效率的场合需要注意。同时需要警惕的是，Perseus 目前只优化能耗未考虑模型精度等其他因素，好在频率调节通常不影响数值结果。</p>
+<h2 id="七业内相关工作对比">七、业内相关工作对比</h2>
+<ul>
+<li><strong>EnvPipe（内源节能方案）</strong>：EnvPipe 专注于<strong>流水线内的不平衡</strong>，通过降低最后一层的 GPU 频率来减少流水线气泡带来的浪费。它只解决了内在能耗冗余，且策略单一（假设最后阶段是非关键路径）。Perseus 则提供了更通用的框架，可以对任意非关键算子降频，因此在相同场景下达到了更高的节能率。同时，EnvPipe 无法处理慢节点的情况，而 Perseus 的统一模型可以覆盖这部分优化。</li>
+<li><strong>Zeus（单机能耗优化）</strong>：Zeus 是此前的一项工作，针对单 GPU 训练通过动态调整功率上限来找到能耗和训练速度的最佳折中。然而 Zeus 未考虑流水线并行情形，在多 GPU 训练中会忽略内在不平衡（它若统一降频会连关键路径一起变慢）。Perseus 可以看作 Zeus 思路在大模型分布式场景的拓展：利用更细粒度的图模型，分别调节不同算子的速度。因此在多 GPU 实验中 Perseus 明显胜过 Zeus 式的全局调节方法。</li>
+<li><strong>流水线并行负载均衡</strong>（如 GPipe/PipeDream 等）：这些系统致力于将模型划分得各阶段计算量尽可能均衡，从源头上减少流水线空闲时间。它们提升的是<strong>性能</strong>，间接也减少了一些能耗浪费。然而完全均衡在实际很难做到，仍会有残余不均。Perseus 可以视为对这类框架的补充：在已经近似均衡的基础上，进一步利用 DVFS 消除细微的剩余不平衡和因慢卡导致的等待。从贡献上看，传统流水线并行主要解决“更快训练”，而 Perseus 则聚焦“更省电训练”，两者可结合实现又快又省。</li>
+</ul>
+<h3 id="个人观点">7.1 个人观点</h3>
+<p>总体而言，我认为这篇论文在<strong>大模型系统优化</strong>领域提供了一个新的视角：不仅关注训练速度，也把能源效率纳入优化目标，并通过软硬件协同达到目的。实验基线的选择比较合理，涵盖了现有能耗优化方案和经典并行框架，证明了作者的改进是显著的。</p>
+<p>不过我也注意到一些可以改进之处。例如，基于当下的实验，Perseus 还可以尝试融入<strong>集群调度策略</strong>：比如在数据中心电力高峰时自动切换到更节能的频率方案，以降低瞬时功耗峰值，这会使方案更有实用价值。另外，在实验设置上，作者主要模拟了单个慢节点，如果能测试<strong>不同慢节点频发模式</strong>（如随机多节点抖动）下 Perseus 的效果，会更全面展示系统鲁棒性。如果由我来继续这项研究，我会考虑设计一些长时间、多任务的实验场景，引入真实的外部扰动，观察 Perseus 是否依然能够有效地节能且不干扰训练过程，从而进一步验证其实用性。</p>
+<h2 id="八在实际训练栈中如何落地">八、在实际训练栈中如何落地？</h2>
+<p>要将 Perseus 方法引入到实际的大规模训练框架中，需要对训练栈的多个部分进行扩展和改造： - <strong>数据加载与预处理</strong>：通常不需要改动数据加载逻辑，但要确保数据加载的延迟能够被监控。如果因为数据 I/O 导致某步迭代变慢，应将此视作“外在慢节点”并通知 Perseus。工程上，可以在数据 loader 完成一个 batch 加载后打标记计时，如果发现某批次准备超时，则触发 Perseus 降频其它计算节点，以免 GPU 干等。 - <strong>模型并行与流水调度</strong>：在训练框架（如 Megatron-LM、DeepSpeed）的流水并行实现中，加入 Perseus 客户端逻辑。例如在每个微批次执行前后插入调用，用于测量该阶段耗时和能耗，并根据服务器下发的策略调整 GPU 频率。这意味着修改框架的调度代码路径，增加<strong>钩子 (hook)</strong> 函数。工程工作量中等，需要熟悉框架的 pipeline 执行流程。 - <strong>张量并行与通信</strong>：对使用张量并行的模型，同一流水段上的多块 GPU 应同步调频，以免出现一块 GPU 变慢拖累其他。实现上，可以让同一张量并行组内的客户端通过 MPI/NCCL 互通，统一按照服务器计划调整频率。此外，梯度同步 All-Reduce 等通信操作本身无法通过降频节能，但 Perseus 可以在通信期间降低参与通信的 GPU 核心频率（反正计算单元闲着），以减少等待时的空转功耗。这需要框架在调用通信库时增加前后频率调整指令。 - <strong>底层 Kernel 与算子</strong>：Perseus 不修改具体算子实现，但通过调整硬件频率影响算子的执行。工程上可能需要确保这种频率切换对显存、内存没有副作用，并兼容框架的异步执行。特别是需要注意<strong>频率切换的开销</strong>：在 NVIDIA GPU 上更改 SM 频率通常是毫秒级的，会阻塞 GPU 流水，因此要在批与批之间或计算空隙执行，避免干扰正常计算。调度不好可能导致吞吐下降。 - <strong>监控与集成</strong>：在运维层面，需要将 Perseus 服务部署为集群的一部分，监控各 GPU 的功耗、温度等。当实际应用时，可能需要提供一个<strong>配置开关</strong>或参数，让用户决定是否开启节能模式。还要扩展训练仪表板，增加能耗指标（每秒焦耳、累计能耗等）供用户观察。 - <strong>超参和自动调优</strong>：Perseus 本身主要依赖 Profiling 自动生成策略，但在工程中可能需要一些保守因子。例如，可设置<strong>最低允许频率</strong>或<strong>最大容忍慢化百分比</strong>，以防止过度降频影响训练稳定。此外，由于不同 GPU 的 DVFS 特性差异，可能要针对常用 GPU 类型离线微调 Perseus 算法的参数（如时间步长 τ）。</p>
+<p>整体来看，将 Perseus 融入大规模训练栈需要一定的工程投入，但收益也很明确：只要训练存在不均衡或等待，付出改动就能换来能源成本的降低。在实现过程中需重点关注<strong>频率控制的安全性和跨进程协调</strong>，并仔细评估在真实集群上的效果。</p>
+<h2 id="九值得进一步探索的研究方向">九、值得进一步探索的研究方向</h2>
+<ul>
+<li><strong>多任务能耗调度</strong>：在集群中多个训练作业同时进行时，如何协调它们的能耗优化？例如，一个作业出现空闲时，是否可以暂时提高另一作业的频率以加快进度，反之在负载高峰期统一降频以避免电力尖峰。这涉及将 Perseus 的思路推广到<strong>集群调度</strong>层面，实现跨作业的能源分配优化。</li>
+<li><strong>更细粒度的硬件节能</strong>：除了调整 GPU 核心频率，后续可探索控制其他硬件单元以节能，例如显存频率、GPU 的多个电压/频率域，甚至 CPU 与网络设备的节能联动。这需要扩展能耗模型和控制接口，让系统在保证训练性能的前提下，从更多角度削减无效功耗。</li>
+<li><strong>训练任务弹性与能效</strong>：未来研究可以考虑让训练过程本身更具弹性，例如根据能源预算动态改变训练参数（微批大小、模型并行度）以调节功耗。在能耗紧张或碳排放受限的环境下，训练可以“降档”，而在宽松时段再“补回”，以实现<strong>能源感知的深度学习训练</strong>。</li>
+<li><strong>能耗优化与模型架构联合设计</strong>：目前硬件节能优化与模型本身设计是解耦的。一个新方向是在设计模型（尤其是超大模型的层结构）时就考虑能耗均衡的问题，减少极端耗时层。或者训练框架自动为不同层分配不同的硬件资源/频率，使整体更节能。这将结合系统优化与模型架构优化，进一步提升能效比。</li>
+<li><strong>推理场景的能源优化</strong>：大模型推理同样存在负载不均和资源浪费（例如批处理中长短序列混杂导致的空闲）。将 Perseus 的思想应用到推理系统中，例如 vLLM 等模型服务框架，在低负载时主动降频节能，在高负载时迅速恢复，全局优化推理吞吐和能耗的平衡，也是很有价值的方向。</li>
+</ul>
+<h2 id="十知识图谱思维链">十、知识图谱思维链</h2>
+<ul>
+<li><strong>并行与调度</strong>：Perseus 提供了一种全新的<strong>并行调度优化</strong>视角——不仅调度计算任务的顺序和映射，还调度它们的执行速度。这丰富了大模型训练并行策略的内涵，与数据并行、模型并行、流水线并行共同构成完整的优化组合。</li>
+<li><strong>内存管理与显存优化</strong>：该方法本身对显存占用影响不大，它不改变模型和激活的存储。但从思维上启发我们：正如可以通过交换显存换时间，也可以通过增加时间余量来换取能耗节省。在不缺显存场景下，Perseus 等于用<strong>冗余算力</strong>换取了能效。</li>
+<li><strong>通信与集体操作</strong>：Perseus 涉及同步训练中的通信等待优化。它通过让非关键路径的 GPU 降频，<strong>填平了原本因等待通信而浪费的能耗</strong>。这提醒我们在优化通信时，不仅可以改算法减少等待，也可以在等待期间降低功耗，同样达到效率提升的目的。</li>
+<li><strong>Kernel 与算子优化</strong>：传统算子优化关注加速执行，而 Perseus 则从另一个维度优化算子——降低能耗。通过对每个算子的能耗特性 Profiling，并针对性地调整执行速度，它提供了一种<strong>算子级节能优化</strong>的范例，补充了性能优化范畴。</li>
+<li><strong>模型结构与架构设计</strong>：模型的层结构会影响流水线的负载均衡，进而影响能耗浪费比例。Perseus 的出现促使我们在设计模型并划分流水线时，不仅考虑计算量，也可考虑<strong>能耗均衡</strong>。例如，是否能将极耗时的层拆分，或者将一些计算前移/后移来平衡每段时间。这种架构层面的思考与 Perseus 运行时优化相辅相成。</li>
+<li><strong>数据、预处理与打包策略</strong>：虽然 Perseus 不直接处理数据打包，但它为数据层面的优化提供了新思路：如果数据分布导致某些 batch 计算特别慢，那么在等待这些 batch 完成时其他 GPU 可以降频省电。这提示我们在设计数据打包策略时，也要留意<strong>批次耗时的一致性</strong>问题，必要时可结合像 Perseus 这样的机制应对不一致导致的能耗浪费。</li>
+</ul>
+<h3 id="个人收获与反思">10.1 个人收获与反思</h3>
+<p>阅读这篇论文让我意识到，在追求大模型训练速度的同时，<strong>能源效率</strong>也是不可忽视的衡量维度。以往我们更多关注通过并行和更强硬件来加速训练，但作者指出就算在固定硬件下，仅凭软件调度也能挖掘出数十%的能耗冗余。这种对系统“碎片”的利用思路令我印象深刻——原来 GPU 空转等待的那些时刻，可以转化为实实在在的节省。</p>
+<p>对我而言，最大的启发在于<strong>软硬件协同优化</strong>的可能性。Perseus 展示了不修改模型、不改变硬件，仅通过聪明的系统层调度，就可以提升整个训练过程的能效比。这让我反思在自己的工作中，是否也存在类似的优化契机。例如，或许可以开始关注训练时的功耗数据，将其纳入监控指标，并尝试简单的策略（比如在数据加载等待时降低 GPU 功率上限）来验证节能效果。</p>
+<p>同时，本论文也让我意识到推进这类优化需要跨越软件和硬件边界的知识。例如，理解模型的并行机制和熟悉 GPU 的 DVFS 接口同等重要。在今后的实践中多留意底层硬件特性，比如不同 GPU 的频率调节能力、功耗曲线等，从而在设计训练系统时引入<strong>能耗感知</strong>的理念。总的来说，Perseus 为大规模 AI 训练的可持续性提供了实用的方案，也为系统优化提供了新的思路，我希望在自己的平台中尝试引入这些理念，为节能降耗贡献一份力量。</p>
+<blockquote>
+<p><strong>总体评价：</strong> 这是一项面向工程实践的出色工作，它提醒我们在追求极致性能的同时，不应忽视能源代价。在超大模型训练领域，Perseus 提供了一种无需硬件升级的节能途径，非常值得相关从业者借鉴。整体来看，这篇论文偏系统实用导向，对于构建和优化大规模训练平台有直接的参考价值。</p>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/paper/" rel="tag"># paper</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2025/12/28/paper/rail_only/" rel="prev" title="Rail-only: A Low-Cost High-Performance Network for Training LLMs with Trillion Parameters">
+      <i class="fa fa-chevron-left"></i> Rail-only: A Low-Cost High-Performance Network for Training LLMs with Trillion Parameters
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E8%AE%BA%E6%96%87%E9%80%9F%E8%A7%88"><span class="nav-number">1.</span> <span class="nav-text">一、论文速览</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E8%AE%BA%E6%96%87%E7%BB%93%E6%9E%84"><span class="nav-number">2.</span> <span class="nav-text">二、论文结构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E6%96%B9%E6%B3%95%E4%B8%8E%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1"><span class="nav-number">3.</span> <span class="nav-text">三、方法与系统设计</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A0%B8%E5%BF%83%E6%A8%A1%E5%9D%97%E4%B8%80%E8%A7%88"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 核心模块一览</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E6%B5%81%E4%B8%8E%E6%8E%A7%E5%88%B6%E6%B5%81"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 数据流与控制流</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%85%B3%E9%94%AE%E5%81%87%E8%AE%BE%E4%B8%8E%E9%80%82%E7%94%A8%E8%8C%83%E5%9B%B4"><span class="nav-number">3.3.</span> <span class="nav-text">3.3 关键假设与适用范围</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%95%B0%E5%AD%A6%E5%85%AC%E5%BC%8F%E4%B8%8E%E7%AE%97%E6%B3%95%E8%A7%A3%E8%AF%BB"><span class="nav-number">3.4.</span> <span class="nav-text">3.4 数学公式与算法解读</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E5%BB%BA%E6%A8%A1%E6%96%B9%E5%BC%8F%E4%B8%8E%E8%AF%84%E4%BC%B0%E6%8C%87%E6%A0%87"><span class="nav-number">4.</span> <span class="nav-text">四、建模方式与评估指标</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98%E6%98%AF%E5%A6%82%E4%BD%95%E5%BD%A2%E5%BC%8F%E5%8C%96%E7%9A%84"><span class="nav-number">4.1.</span> <span class="nav-text">4.1 问题是如何形式化的？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A0%B8%E5%BF%83%E8%AF%84%E4%BC%B0%E6%8C%87%E6%A0%87"><span class="nav-number">4.2.</span> <span class="nav-text">4.2 核心评估指标</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E4%B8%BB%E8%A6%81%E5%AE%9E%E9%AA%8C%E5%8F%91%E7%8E%B0"><span class="nav-number">5.</span> <span class="nav-text">五、主要实验发现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%85%B3%E9%94%AE%E5%9B%BE%E8%A1%A8%E8%A7%A3%E8%AF%BB"><span class="nav-number">5.1.</span> <span class="nav-text">5.1 关键图表解读</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E4%BC%98%E7%82%B9%E4%B8%8E%E5%B1%80%E9%99%90"><span class="nav-number">6.</span> <span class="nav-text">六、优点与局限</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E4%B8%9A%E5%86%85%E7%9B%B8%E5%85%B3%E5%B7%A5%E4%BD%9C%E5%AF%B9%E6%AF%94"><span class="nav-number">7.</span> <span class="nav-text">七、业内相关工作对比</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%AA%E4%BA%BA%E8%A7%82%E7%82%B9"><span class="nav-number">7.1.</span> <span class="nav-text">7.1 个人观点</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E5%9C%A8%E5%AE%9E%E9%99%85%E8%AE%AD%E7%BB%83%E6%A0%88%E4%B8%AD%E5%A6%82%E4%BD%95%E8%90%BD%E5%9C%B0"><span class="nav-number">8.</span> <span class="nav-text">八、在实际训练栈中如何落地？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E5%80%BC%E5%BE%97%E8%BF%9B%E4%B8%80%E6%AD%A5%E6%8E%A2%E7%B4%A2%E7%9A%84%E7%A0%94%E7%A9%B6%E6%96%B9%E5%90%91"><span class="nav-number">9.</span> <span class="nav-text">九、值得进一步探索的研究方向</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1%E6%80%9D%E7%BB%B4%E9%93%BE"><span class="nav-number">10.</span> <span class="nav-text">十、知识图谱思维链</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%AA%E4%BA%BA%E6%94%B6%E8%8E%B7%E4%B8%8E%E5%8F%8D%E6%80%9D"><span class="nav-number">10.1.</span> <span class="nav-text">10.1 个人收获与反思</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">PePe</p>
+  <div class="site-description" itemprop="description">做正确的事</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">16</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+        <span class="site-state-item-count">9</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">浙ICP备2024078386号 </a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">PePe</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/medium-zoom@1/dist/medium-zoom.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+<script defer src="https://events.vercount.one/js"></script>
+
+</body>
+</html>
