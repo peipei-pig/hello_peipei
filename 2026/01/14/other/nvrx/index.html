@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 7.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"yaopepe.com","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"post","display":"post","padding":18,"offset":12,"onmobile":false,"width_dual_column":240},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":true,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":true},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.json"};
+  </script>
+
+  <meta name="description" content="介绍NVRx的基础知识">
+<meta property="og:type" content="article">
+<meta property="og:title" content="NVIDIA Resiliency Extension (NVRx) 简介">
+<meta property="og:url" content="https://yaopepe.com/2026/01/14/other/nvrx/index.html">
+<meta property="og:site_name" content="果冻甜甜的">
+<meta property="og:description" content="介绍NVRx的基础知识">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-01-14T12:20:19.686Z">
+<meta property="article:modified_time" content="2026-01-14T13:35:44.325Z">
+<meta property="article:author" content="PePe">
+<meta property="article:tag" content="NVRx">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://yaopepe.com/2026/01/14/other/nvrx/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>NVIDIA Resiliency Extension (NVRx) 简介 | 果冻甜甜的</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">果冻甜甜的</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-首页">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-分类">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-标签">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-归档">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-关于">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+<div class="site-meta-counts" style="font-size:.9em;opacity:.85;margin-top:.25rem;display:flex;gap:.75rem;flex-wrap:wrap">
+  <span class="post-meta-item">
+    <i class="fa fa-eye"></i>
+    <span class="post-meta-item-text">总访问量</span>
+    <span id="vercount_value_site_pv">0</span>
+  </span>
+
+  <span class="post-meta-item">
+    <i class="fa fa-file"></i>
+    <span class="post-meta-item-text">总文章数</span>
+    <span id="total_posts_count">17</span>
+  </span>
+</div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://yaopepe.com/2026/01/14/other/nvrx/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="PePe">
+      <meta itemprop="description" content="做正确的事">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="果冻甜甜的">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          NVIDIA Resiliency Extension (NVRx) 简介
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2026-01-14 20:20:19 / 修改时间：21:35:44" itemprop="dateCreated datePublished" datetime="2026-01-14T20:20:19+08:00">2026-01-14</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%85%B6%E5%AE%83/" itemprop="url" rel="index"><span itemprop="name">其它</span></a>
+                </span>
+            </span>
+
+          
+
+<span class="post-meta-item">
+  <span class="post-meta-item-icon"><i class="fa fa-eye"></i></span>
+  <span class="post-meta-item-text">Views:</span>
+  <span id="vercount_value_page_pv">0</span>  
+</span>
+
+
+            <div class="post-description">介绍NVRx的基础知识</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <span id="more"></span>
+<hr />
+<h2 id="什么是-nvrx">1. 什么是 NVRx？</h2>
+<p>NVIDIA Resiliency Extension（NVRx）核心功能示意：支持自动重启、分层（层次化）Checkpoint、故障检测和健康检查等。该扩展面向大规模分布式训练，通过模块化集成多种容错机制，提高因故障中断造成的训练停机时间，使训练保持高Goodput（有效吞吐量）。NVRx 提供了系统级健康检查、运行时故障快速检测以及自动恢复能力，并结合快速频繁的Checkpoint*将工作损失降到最低。下面将围绕问题所列要点，对NVRx项目的故障容错原理、应用场景、监控段划分、重运行状态机、故障诊断流程和分布式Checkpoint机制进行详尽调研说明。github:https://github.com/NVIDIA/nvidia-resiliency-ext</p>
+<hr />
+<h2 id="故障容错实现原理">2. 故障容错实现原理</h2>
+<ul>
+<li><p><strong>设计理念</strong>：NVRx的故障容错模块（Fault Tolerance）采用独立监控进程 + 定期心跳/代码段检查的架构，实现对训练进程挂起或失去响应的检测和自动恢复。在每个计算节点上，NVRx提供一个定制的启动器ft_launcher（基于PyTorch的torchrun），负责启动所有训练进程（ranks）及对应的监视进程（rank monitor）。每个训练进程都会和自己的监视进程建立连接，并定期发送状态更新（比如每次训练迭代发送“心跳”信号，或标记代码段的进入/退出）以证明自身存活。如果监视进程在指定超时时间内未收到更新，则判断该训练进程可能已宕挂，从而主动终止出问题的进程。各监视进程之间彼此独立，不直接通信；而ft_launcher通过PyTorch弹性框架的 rendezvous 机制感知进程存活状态。当任意一个训练进程异常终止或被监视进程杀掉时，ft_launcher能够捕获到该事件，并根据配置的策略决定是否在不退出作业的前提下重启整个训练作业或部分进程</p></li>
+<li><p><strong>关键机制</strong>：NVRx的故障容错提供两种挂起检测API，可根据应用需求选用：一是心跳机制（Heartbeats API），在训练代码中定期发送轻量“心跳”信号到监视进程，如果超过阈值时间未收到心跳则判定训练挂起。心跳方式实现简单但需要设置较宽松的超时时间来涵盖心跳间可能存在的最长操作时间。二是代码段标记机制（Sections API），即在用户训练脚本的关键区域手动插入代码片段标记（如start_section(“名称”)/end_section()），监视进程针对每个标记段各自计算耗时并设定超时阈值如果某代码段自进入后持续执行超过其超时上限，则判定训练停滞。相比心跳，分段监控可以针对不同阶段精细地设置超时时间，更迅速地发现卡顿，但需要对训练代码进行改造来插入标记。两种机制可以同时使用，互为补充。一旦检测到挂起或进程故障，NVRx会触发容错响应机制：首先利用最新Checkpoint自动重启作业，使训练从中断点继续，无需人工干预；另外NVRx还支持进程内重启（In-Process Restart）等技术，在可能情况下直接在已有进程中恢复，以进一步加快故障恢复。</p></li>
+<li><p><strong>容错能力</strong>：通过上述机制，NVRx可以有效应对训练过程中常见的无响应卡顿、进程崩溃以及某些硬件故障导致的错误。在集群作业中，它实现了作业内自动重启：故障发生时无需重新排队申请计算节点资源，ft_launcher会在原有作业上下文中重新拉起进程，最大程度减少停机时间。此外，NVRx配合其Checkpoint组件，能够做到快速且频繁地保存训练状态，使得无论是挂起还是节点杀死，训练都可从最近一次checkpoint恢复，避免长时间计算成果的丢失。NVRx还提供系统级健康检查（如节点健康服务、存储系统连通性检查等）来预先发现潜在问题。整体而言，其设计理念是在不中断整个作业的前提下，“早检测、快恢复”，从而提高大规模训练的健壮性和有效运行时间。</p></li>
+</ul>
+<hr />
+<h2 id="适用场景">3. 适用场景</h2>
+<p>NVRx的容错机制主要面向大型分布式深度学习训练，在以下场景中特别适用：</p>
+<ul>
+<li><p><strong>超大规模集群训练</strong>：当训练作业跨越大量节点和GPU时，出现个别节点故障、网络闪断或GPU失效的概率增加。NVRx旨在应对这种“大规模、长周期”训练中的不可靠因素。例如，在硬件可靠性欠佳或使用成百上千张GPU的环境中，NVRx的故障容忍可将单点故障对整体作业的影响降到最低。它可以自动检测训练中发生的挂起或异常，并从最近checkpoint恢复训练，无需人工介入，大幅减少因节点/GPU问题导致的停机损失。</p></li>
+<li><p><strong>易发生瞬时错误的环境</strong>：如果所处的计算环境中瞬态故障较为常见（例如云环境中偶发的GPU计算错误、NCCL通信超时，或存储访问抖动），NVRx提供的监控和重启机制非常有用。它能够区分暂时的异常（例如一次性的NaN结果或短暂挂起）与持续性问题，并对暂时性故障自动恢复继续训练。</p></li>
+<li><p><strong>云端弹性训练和任务抢占</strong>：在云计算或共享集群中，作业可能因预留时间到期或高优先级任务插入而被中断。NVRx与作业调度器结合，可实现作业自动续跑：当原作业因非错误原因结束时，可在调度器（目前支持Slurm）上自动提交后续作业并接力训练。这种方式对于训练大模型且单个作业时长受限的情况（例如学院集群每次作业最多跑48小时等）特别有帮助，使训练在多个作业窗口内自动衔接完成。</p></li>
+<li><p><strong>深度学习框架集成</strong>：NVRx已集成到PyTorch Lightning回调和NVIDIA NeMo等框架中，方便研究者在上述框架下启用容错。典型应用如LLM（大型语言模型）、语音/多模态模型的预训练，这些“前沿AI模型”的训练往往周期长、资源多，使用NVRx可以在这些复杂场景下提供所需的可靠性。需要注意的是，目前NVRx容错功能主要在Linux + Slurm的分布式训练环境中测试支持。因此，最契合的场景是在使用Slurm调度的GPU集群上进行大规模PyTorch训练。当满足这些条件时，NVRx能最大程度发挥作用，在硬件不稳定、规模庞大的训练中显著减少因故障导致的停机时间。</p></li>
+</ul>
+<hr />
+<h2 id="训练过程的三个监控段及作用">4. 训练过程的三个监控段及作用</h2>
+<p>NVRx的故障监控采用“分段监控”思想，将训练过程划分为三个关键段落进行针对性监测，每段设置独立的超时阈值和监控目标：</p>
+<ul>
+<li><p><strong>初始化段（Setup Section）</strong>：覆盖训练启动后的初始化过程，包括模型构建、数据加载和恢复Checkpoint等步骤。这一阶段通常耗时固定且可预估。NVRx为初始化段设置单独的超时时间，用于监控训练在准备阶段是否卡顿或死锁。例如，如果rank在初始化（如分配显存、加载数据）时陷入长时间等待，监视进程将据此触发超时报警并终止挂起的rank。通过监控初始化段，可以尽早发现启动时的配置问题或资源不可用情况，提高训练作业一开始的可靠性。</p></li>
+<li><p><strong>训练迭代段（Step Section）</strong>：涵盖每个训练步骤/迭代的执行过程，包括正向传播、反向传播及梯度同步等。这是训练过程中循环往复的主体。NVRx会在代码中将每次迭代的起点和终点标记为一个“step”监控段，并针对其持续时间设置超时。如果某次迭代由于某种原因（如某个GPU卡死、通信阻塞）执行时间超出正常范围，监控系统会判定训练已“挂起”并终止相应进程。监控训练段能够及时捕捉训练中发生的异常卡顿，防止整个作业无限制地停滞下去。</p></li>
+<li><p><strong>Checkpoint保存段（Checkpointing Section）</strong>：监控保存检查点文件的过程。在大型模型训练中，保存checkpoint可能需要较长时间（尤其当写入远端存储时），也容易受到I/O性能波动影响。NVRx对此用独立段进行监控，设置较宽裕但有限的超时时间。例如checkpoint保存通常几分钟内完成，如果超过阈值（如30分钟）仍未完成，监控进程将视为checkpoint步骤卡死，从而采取措施终止或重启。监控Checkpoint段可以发现由于存储故障或文件系统挂起导致的保存失败，保障训练不会无限等待保存完成。</p></li>
+</ul>
+<p>上述三个监控段各自对应训练流程的关键环节，分别聚焦初始化、迭代训练、模型保存的超时监测。通过为不同阶段定制超时阈值，NVRx实现了更精细的挂起检测：初始化和Checkpoint阶段通常时间跨度较长，允许设置较长的容忍时间，而训练迭代往往频繁且有规律，可设置较短的超时快速发现异常。需要补充的是，除这三段外，NVRx还设有段外监控（Out-of-Section）超时用于监测各段之间的空闲时间。例如两次迭代之间或训练与评估之间的间隔也不能无限制拖延，否则也会触发警报。总体而言，三段监控机制使得容错系统能针对训练全过程的不同阶段进行分类监控，既避免了粗一统的心跳超时过于保守，又能在各环节快速定位和处理可能出现的卡顿故障。</p>
+<hr />
+<h2 id="重运行状态机的工作方式与用途">5. 重运行状态机的工作方式与用途</h2>
+<ul>
+<li><p><strong>定义</strong>：“重运行状态机”（Re-run State Machine）是NVRx提供的一种实验性功能，用于在训练过程中对异常结果进行自动复核和归因分析。这里的“异常结果”通常指训练中出现的不正常计算现象，例如损失值突变（loss突然异常增大）或出现NaN/Inf等数值异常。传统训练难以及时判断这类异常究竟源于一次偶发的硬件错误还是算法本身问题，而重运行状态机通过多次重复计算来帮助区分瞬时错误还是持续性错误。</p></li>
+<li><p><strong>工作方式</strong>：重运行状态机插入在训练步骤的核心计算流程中，对每一次前向/后向计算结果进行验证，并按照预定义逻辑决定是否需要重算。其内部维护了一套状态转换规则，大致可分为以下阶段：</p>
+<ul>
+<li>正常执行阶段（Initial Run）：首先按正常流程执行当前的训练迭代（通常指一次forward-backward）。完成后对关键结果进行校验，例如检查loss是否为NaN或是否超出合理范围。如果结果看起来正常，则状态机保持“通过”，训练继续而无需重运行。若检测到异常结果，状态机转入“需要重运行”状态，准备启动进一步的验证步骤。</li>
+<li>第一次重运行（First Re-run, In-place）：在同一块GPU上重新执行刚才的训练步骤计算。为了确保复现性，状态机会重置随机数种子和数据加载器状态，尽可能确保两次计算在相同条件下进行。然后再次检查结果：如果这次重运行的结果与初次不同，即异常未重现，则说明上一次异常可能是一次性偶发错误，状态机记录“非确定性/瞬时”现象。如果结果重现了相同的异常，则表明问题具有确定性，需要进一步调查其来源。状态机会据此决定下一步动作：未重现则认为是瞬时错误，状态机可跳过后续步骤；重现则进入下一个状态。</li>
+<li>第二次重运行（Second Re-run, Different GPU）：若异常在同一设备上可以稳定重现，为了判断是否与当前GPU/硬件有关，状态机会触发跨设备重运行。具体做法是：先将当前训练状态保存为Checkpoint，然后在另一块GPU上重新加载该Checkpoint并执行相同计算。通过更换硬件环境，再次观察异常是否出现。如果在不同GPU上没有出现之前的异常，则说明原先的异常很可能是由于第一块GPU存在隐含故障（例如GPU DRAM错误或运算单元不可靠）造成的。反之，如果在不同GPU上依然出现同样的异常结果，那么可以推断问题不是硬件原因，而是算法本身固有的（例如模型/数据问题导致的确定性异常）。完成第二次重运行后，状态机进入“归因分析”状态。</li>
+<li>结果归因阶段（Attribution）：综合初次及多次重运行的结果，重运行状态机对异常的性质进行分类。主要分为三类：①瞬时错误：仅第一次出现，后续重算未再现，判定为一次随机偶发故障（Transient Error）；②持久错误（硬件故障）：在同硬件上可重复出现，但更换硬件后消失，判定为某一设备的潜在缺陷引发的错误（Persistent Hardware Error）；③确定性结果：无论同硬件还是跨硬件重跑都反复出现，说明该异常其实是可确定重现的，可能并非硬件故障而是代码逻辑或数值稳定性问题，甚至可能其实是正确行为的误判。状态机据此分类后，会输出相应的信息或采取动作：例如对可能的硬件故障给予警告（标记可疑GPU），对于瞬时错误则记录统计但训练继续，对于持续重现的错误则可以选择终止训练以防止错误传播。</li>
+</ul></li>
+<li><p><strong>用途和作用</strong>：重运行状态机的主要用途在于故障归因和系统健壮性分析。它帮助训练任务自动判别异常是“虚惊一场”还是真正的问题所在，从而采取不同措施：比如，检测到可能的瞬时计算错误，系统可以在无需人工干预情况下自动重跑计算并继续训练，提高训练对短暂硬件毛刺的容忍度；若判定为硬件永久性故障（即某GPU重复产生错误），则可以标记该GPU不健康并触发训练在新硬件上重启（通过退出进程让调度器或上层框架将该rank映射到其他GPU）。此外，在数值确定性方面，重运行状态机还可用于统计训练过程中的非确定性因素：例如开启“report_stats”模式，让每一步都重复计算一次，对比结果差异，从而量化浮点计算的不稳定性。总的来说，重运行状态机为大规模分布式训练提供了一种自动化的结果验证与诊断工具。在实验阶段，它有助于发现隐蔽的硬件问题，保障训练在不可靠硬件上的正确性；对于研发人员，它也提供了定位NaN等异常的线索，使得在出现可疑结果时，系统能够给出更明确的故障类型判断，方便进一步采取修复措施。</p></li>
+</ul>
+<hr />
+<h2 id="故障诊断流程重运行判断瞬时或永久错误">6. 故障诊断流程：重运行判断瞬时或永久错误</h2>
+<p>NVRx通过上述重运行状态机实现故障诊断，其判断流程正如题述：</p>
+<ul>
+<li><p><strong>第一次重运行</strong>：检查结果重现性。当监测到异常结果（如Loss为NaN）时，系统首先在相同环境下再执行一次相同计算，以验证问题是否重复出现。如果在这次重跑中异常不再出现，则意味着上一次异常可能是一次随机事件，并非持续性问题。这种不可重现的故障被认为是瞬时错误（Transient Error），例如由于临时的数值不稳定或硬件的瞬时干扰导致。在此情况下，NVRx会记录该现象但视作短暂扰动，训练可继续进行。</p></li>
+<li><p><strong>第二次重运行</strong>：在不同GPU上验证结果。如果异常在同一GPU上第一次重跑时再次重现，则表明问题具有确定性，这时系统会将训练状态保存Checkpoint并切换到另一块GPU执行相同计算。这样可检验问题是否与硬件相关：如果换GPU后异常未能重现，说明原先的问题只在特定GPU环境出现，很可能该GPU存在硬件缺陷或隐含错误，即判定为永久性错误（Persistent Error）。相应地，NVRx会将此视为严重问题——可能会终止当前作业并标记该GPU节点不健康，以防止错误再次发生。而如果在不同GPU上依然重现了相同异常，那么可以断定该异常与硬件无关，而是训练本身产生的确定性错误或数值问题。这种情况不属于瞬时硬件故障，也不归类为设备缺陷，而是提示可能存在算法逻辑bug或数据问题（或者事实上这个“异常”结果就是确定的正确行为，例如模型发散导致loss为NaN）。NVRx在这种情况下会触发不同的处理策略，例如直接停止训练并报告验证失败，以便开发者检查代码/数据问题。</p></li>
+<li><p><strong>基于重现性判断瞬时或永久故障</strong>：通过上述两次重运行的重现情况，系统实现了对故障性质的自动判断。不可重现的视作瞬时故障——训练将通过重跑跳过该次异常并继续，从而提高容错性；可重现且局限于特定硬件的视作硬件永久故障——此时系统可采取措施如更换设备重新训练或提醒运维排查该硬件；可在不同环境重复的则被认定为非硬件原因的问题——系统可能终止训练并上报，以避免浪费算力在一个有根本问题的作业上。整个流程使NVRx不仅能恢复训练，还能智能区分故障类型。例如，日志中会明确提示“可能的瞬时错误”或“可能的持久错误”，帮助用户了解是偶发事件还是需要更换硬件或修正代码。这种两级重运行的诊断方式确保了更高的准确性：既避免把一次性故障误判为硬件问题反复重启浪费时间，也避免持续性错误被当作偶发现象而被忽略。因此可以确认，NVRx的故障诊断流程确实如题述，通过第一次本地重跑和第二次跨设备重跑两步，依据结果重现与否来区分错误的暂时性或永久性，并据此采取相应措施</p></li>
+</ul>
+<hr />
+<h2 id="分布式checkpoint机制原理与优势">7. 分布式Checkpoint机制原理与优势</h2>
+<ul>
+<li><p>NVRx提供的分布式Checkpoint机制旨在使模型存档与恢复在不同并行配置下变得灵活可行，从而支持弹性扩展和高效容错。其核心原理是使用NVIDIA Megatron等工具提供的“分布式Checkpoint”格式（torch distributed checkpoint），使得“在一种并行模式下保存的checkpoint可以在另一种并行模式下重新加载”。这意味着，假如一个模型在数据并行度=8、张量模型并行度=1的配置下训练并保存了checkpoint，那么借助该机制，可以在日后用数据并行度=4、张量并行度=2等不同配置来加载这个checkpoint并继续训练。这种跨配置的兼容性赋予训练作业弹性扩展能力：当需要扩展到更多GPU或者在资源不足时缩减GPU数量时，无需从头训练，只需调整并行参数并加载已有checkpoint即可，无缝衔接模型状态继续训练。这对长时间大模型训练来说非常关键，因为集群的可用资源可能随时间变化，Checkpoint的跨配置可用性使训练能够灵活地利用当前资源，实现真正的弹性训练。</p></li>
+<li><p><strong>分布式优化器状态格式</strong>：在实现上述灵活性的过程中，Checkpoint中优化器状态（optimizer states）的存储格式起了关键作用。NVRx采用Megatron-Core引入的两种优化器checkpoint格式：dp_reshardable（数据并行可重分片）和fully_reshardable（完全可重分片）。二者的意义、用途和区别如下：</p>
+<ul>
+<li><strong>dp_reshardable（默认格式）</strong>：顾名思义偏重数据并行（Data Parallel）重新切分的方案。使用该格式保存的Checkpoint在相同的模型并行度配置下可以高效地恢复，但不支持改变模型并行维度。它的主要优点是保存和加载速度快，因为只需按数据并行将优化器状态做简单切分/汇总，不用存储完整的全局状态。因此在不需要改变模型并行配置的常规训练过程中，dp_reshardable是推荐使用的格式，能最大化Checkpoint读写性能。换言之，如果训练过程中始终保持模型并行和张量并行等划分不变，用默认格式即可快速Checkpoint，降低存储开销和时间。</li>
+<li><strong>fully_reshardable（完全重分片格式）</strong>：采用更通用的完整重分片方案，允许Checkpoint在任意并行配置变化的情况下被加载。也就是说，不论数据并行或模型并行度如何改变，此格式的优化器状态都提供了所需的信息以重新分布参数。它的实现通常需要在Checkpoint中保存更多元数据或全尺寸的优化器状态，以支持跨配置的重组。因此代价是保存/加载速度较dp_reshardable略慢，占用空间也可能更大。fully_reshardable适用于需要在训练中改变模型并行划分的场景。例如，当计划在中途增减GPU或者调整并行策略时，可在切换配置前启用此格式保存一次Checkpoint，然后在新配置下成功加载。实际用法上，通过设置特定开关（如命令行参数–dist-ckpt-optim-fully-reshardable）来启用完全重分片模式。一旦完成配置转换并保存至少一个checkpoint后，若后续训练不再需要频繁转换，也可以关闭此模式恢复为更高效的dp_reshardable格式继续训练。</li>
+</ul></li>
+<li><p><strong>原理优势</strong>：综合来看，分布式Checkpoint机制通过上述两种格式兼顾了性能与灵活性。建议的工作流程是：平时采用高速的默认格式进行定期checkpoint；当需要调整并行度（比如扩容作业）时，切换到fully_reshardable格式保存一次checkpoint，再用新配置加载，确保模型正确迁移；之后可再切换回默认格式以继续训练、提高性能。这一机制的优势在于：(1) 弹性扩展：允许深度学习训练在不同硬件规模之间迁移，方便在资源变化时扩展或收缩作业规模，而模型进度不受影响；(2) 容错恢复：在某些需要转移到新节点（比如原节点故障更换）时，可利用fully_reshardable确保checkpoint在新硬件上无障碍恢复，从而增强容错性；(3) 性能优化：在不改变并行度时使用dp_reshardable尽量减少Checkpoint开销，不影响训练效率。总之，NVRx的分布式Checkpoint通过可重分片的优化器状态设计，实现了“跨并行配置可加载”这一突破性功能，为大规模分布式训练的弹性伸缩和健壮恢复提供了坚实支撑。</p></li>
+<li><p>优化器状态格式 dp_reshardable vs fully_reshardable 优劣对比： dp_reshardable (默认) 优化器状态按数据并行度切分存储，Checkpoint体积小，保存/加载快。适用于训练过程中并行配置固定的场景。 不支持模型并行度调整快：读写开销低。 fully_reshardable 优化器状态完整存储，含全量元数据，能适配任意并行划分变化[51]。在需要改变并行度（增减GPU或调整模型并行）时使用，以确保Checkpoint可用。 支持任意并行配置变化较慢：读写耗时和开销更高。</p></li>
+</ul>
+<hr />
+<h3 id="参考文献-链接">参考文献 / 链接</h3>
+<ul>
+<li>GitHub - NVIDIA/nvidia-resiliency-ext: NVIDIA Resiliency Extension is a python package for framework developers and users to implement fault-tolerant features. It improves the effective training time by minimizing the downtime due to failures and interruptions. https://github.com/NVIDIA/nvidia-resiliency-ext</li>
+<li>Usage guide — nvidia-resiliency-ext 0.1 documentation https://nvidia.github.io/nvidia-resiliency-ext/fault_tolerance/usage_guide.html</li>
+<li>Resiliency — Megatron Bridge https://docs.nvidia.com/nemo/megatron-bridge/latest/training/resiliency.html</li>
+<li>Resiliency Features — NVIDIA NeMo Framework User Guide https://docs.nvidia.com/nemo-framework/user-guide/latest/resiliency.html</li>
+<li>Sections API Integration — nvidia-resiliency-ext 0.1 documentation https://nvidia.github.io/nvidia-resiliency-ext/fault_tolerance/integration/sections.html</li>
+<li>dist_checkpointing package — Megatron-LM https://docs.nvidia.com/megatron-core/developer-guide/latest/api-guide/dist_checkpointing.html</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/NVRx/" rel="tag"># NVRx</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2025/12/28/paper/reducing_energy/" rel="prev" title="Reducing Energy Bloat in Large Model Training">
+      <i class="fa fa-chevron-left"></i> Reducing Energy Bloat in Large Model Training
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%80%E4%B9%88%E6%98%AF-nvrx"><span class="nav-number">1.</span> <span class="nav-text">1. 什么是 NVRx？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%85%E9%9A%9C%E5%AE%B9%E9%94%99%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86"><span class="nav-number">2.</span> <span class="nav-text">2. 故障容错实现原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%80%82%E7%94%A8%E5%9C%BA%E6%99%AF"><span class="nav-number">3.</span> <span class="nav-text">3. 适用场景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83%E8%BF%87%E7%A8%8B%E7%9A%84%E4%B8%89%E4%B8%AA%E7%9B%91%E6%8E%A7%E6%AE%B5%E5%8F%8A%E4%BD%9C%E7%94%A8"><span class="nav-number">4.</span> <span class="nav-text">4. 训练过程的三个监控段及作用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%87%8D%E8%BF%90%E8%A1%8C%E7%8A%B6%E6%80%81%E6%9C%BA%E7%9A%84%E5%B7%A5%E4%BD%9C%E6%96%B9%E5%BC%8F%E4%B8%8E%E7%94%A8%E9%80%94"><span class="nav-number">5.</span> <span class="nav-text">5. 重运行状态机的工作方式与用途</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%85%E9%9A%9C%E8%AF%8A%E6%96%AD%E6%B5%81%E7%A8%8B%E9%87%8D%E8%BF%90%E8%A1%8C%E5%88%A4%E6%96%AD%E7%9E%AC%E6%97%B6%E6%88%96%E6%B0%B8%E4%B9%85%E9%94%99%E8%AF%AF"><span class="nav-number">6.</span> <span class="nav-text">6. 故障诊断流程：重运行判断瞬时或永久错误</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E5%B8%83%E5%BC%8Fcheckpoint%E6%9C%BA%E5%88%B6%E5%8E%9F%E7%90%86%E4%B8%8E%E4%BC%98%E5%8A%BF"><span class="nav-number">7.</span> <span class="nav-text">7. 分布式Checkpoint机制原理与优势</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%8C%AE-%E9%93%BE%E6%8E%A5"><span class="nav-number">7.1.</span> <span class="nav-text">参考文献 &#x2F; 链接</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">PePe</p>
+  <div class="site-description" itemprop="description">做正确的事</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">17</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">浙ICP备2024078386号 </a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">PePe</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/medium-zoom@1/dist/medium-zoom.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+<script defer src="https://events.vercount.one/js"></script>
+
+</body>
+</html>
