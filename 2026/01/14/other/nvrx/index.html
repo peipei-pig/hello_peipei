@@ -28,7 +28,7 @@
 <meta property="og:description" content="介绍NVRx的基础知识">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2026-01-14T12:20:19.686Z">
-<meta property="article:modified_time" content="2026-01-14T13:45:13.410Z">
+<meta property="article:modified_time" content="2026-01-16T11:50:23.350Z">
 <meta property="article:author" content="PePe">
 <meta property="article:tag" content="NVRx">
 <meta name="twitter:card" content="summary">
@@ -182,7 +182,7 @@
   <span class="post-meta-item">
     <i class="fa fa-file"></i>
     <span class="post-meta-item-text">总文章数</span>
-    <span id="total_posts_count">17</span>
+    <span id="total_posts_count">18</span>
   </span>
 </div>
 
@@ -231,10 +231,16 @@
                 <i class="far fa-calendar"></i>
               </span>
               <span class="post-meta-item-text">Posted on</span>
-              
 
-              <time title="Created: 2026-01-14 20:20:19 / Modified: 21:45:13" itemprop="dateCreated datePublished" datetime="2026-01-14T20:20:19+08:00">2026-01-14</time>
+              <time title="Created: 2026-01-14 20:20:19" itemprop="dateCreated datePublished" datetime="2026-01-14T20:20:19+08:00">2026-01-14</time>
             </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2026-01-16 19:50:23" itemprop="dateModified" datetime="2026-01-16T19:50:23+08:00">2026-01-16</time>
+              </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
                 <i class="far fa-folder"></i>
@@ -270,11 +276,11 @@
 <p>github地址：https://github.com/NVIDIA/nvidia-resiliency-ext</p>
 <!-- toc -->
 <h2 id="什么是-nvrx">1. 什么是 NVRx？</h2>
-<p>NVIDIA Resiliency Extension（NVRx）核心功能示意：支持自动重启、分层（层次化）Checkpoint、故障检测和健康检查等。该扩展面向大规模分布式训练，通过模块化集成多种容错机制，提高因故障中断造成的训练停机时间，使训练保持高Goodput（有效吞吐量）。NVRx 提供了系统级健康检查、运行时故障快速检测以及自动恢复能力，并结合快速频繁的Checkpoint*将工作损失降到最低。下面将围绕问题所列要点，对NVRx项目的故障容错原理、应用场景、监控段划分、重运行状态机、故障诊断流程和分布式Checkpoint机制进行详尽调研说明。</p>
+<p>NVIDIA Resiliency Extension（NVRx）核心功能示意：支持自动重启、分层（层次化）Checkpoint、故障检测和健康检查等。该扩展面向大规模分布式训练，通过模块化集成多种容错机制，提高因故障中断造成的训练停机时间，使训练保持高Goodput（有效吞吐量）。NVRx 提供了系统级健康检查、运行时故障快速检测以及自动恢复能力，并结合快速频繁的Checkpoint将工作损失降到最低。下面将围绕问题所列要点，对NVRx项目的故障容错原理、应用场景、监控段划分、重运行状态机、故障诊断流程和分布式Checkpoint机制进行详尽调研说明。</p>
 <hr />
 <h2 id="故障容错实现原理">2. 故障容错实现原理</h2>
 <ul>
-<li><p><strong>设计理念</strong>：NVRx的故障容错模块（Fault Tolerance）采用独立监控进程 + 定期心跳/代码段检查的架构，实现对训练进程挂起或失去响应的检测和自动恢复。在每个计算节点上，NVRx提供一个定制的启动器ft_launcher（基于PyTorch的torchrun），负责启动所有训练进程（ranks）及对应的监视进程（rank monitor）。每个训练进程都会和自己的监视进程建立连接，并定期发送状态更新（比如每次训练迭代发送“心跳”信号，或标记代码段的进入/退出）以证明自身存活。如果监视进程在指定超时时间内未收到更新，则判断该训练进程可能已宕挂，从而主动终止出问题的进程。各监视进程之间彼此独立，不直接通信；而ft_launcher通过PyTorch弹性框架的 rendezvous 机制感知进程存活状态。当任意一个训练进程异常终止或被监视进程杀掉时，ft_launcher能够捕获到该事件，并根据配置的策略决定是否在不退出作业的前提下重启整个训练作业或部分进程</p></li>
+<li><p><strong>设计理念</strong>：NVRx的故障容错模块（Fault Tolerance）采用独立监控进程 + 定期心跳/代码段检查的架构，实现对训练进程挂起或失去响应的检测和自动恢复。在每个计算节点上，NVRx提供一个定制的启动器ft_launcher（基于PyTorch的torchrun），负责启动所有训练进程（ranks）及对应的监视进程（rank monitor）。每个训练进程都会和自己的监视进程建立连接，并定期发送状态更新（比如每次训练迭代发送“心跳”信号，或标记代码段的进入/退出）以证明自身存活。如果监视进程在指定超时时间内未收到更新，则判断该训练进程可能已宕挂，从而主动终止出问题的进程。各监视进程之间彼此独立，不直接通信；而ft_launcher通过PyTorch弹性框架的 rendezvous 机制感知进程存活状态。当任意一个训练进程异常终止或被监视进程杀掉时，ft_launcher能够捕获到该事件，并根据配置的策略决定是否在不退出作业的前提下重启整个训练作业或部分进程。</p></li>
 <li><p><strong>关键机制</strong>：NVRx的故障容错提供两种挂起检测API，可根据应用需求选用：一是心跳机制（Heartbeats API），在训练代码中定期发送轻量“心跳”信号到监视进程，如果超过阈值时间未收到心跳则判定训练挂起。心跳方式实现简单但需要设置较宽松的超时时间来涵盖心跳间可能存在的最长操作时间。二是代码段标记机制（Sections API），即在用户训练脚本的关键区域手动插入代码片段标记（如start_section(“名称”)/end_section()），监视进程针对每个标记段各自计算耗时并设定超时阈值如果某代码段自进入后持续执行超过其超时上限，则判定训练停滞。相比心跳，分段监控可以针对不同阶段精细地设置超时时间，更迅速地发现卡顿，但需要对训练代码进行改造来插入标记。两种机制可以同时使用，互为补充。一旦检测到挂起或进程故障，NVRx会触发容错响应机制：首先利用最新Checkpoint自动重启作业，使训练从中断点继续，无需人工干预；另外NVRx还支持进程内重启（In-Process Restart）等技术，在可能情况下直接在已有进程中恢复，以进一步加快故障恢复。</p></li>
 <li><p><strong>容错能力</strong>：通过上述机制，NVRx可以有效应对训练过程中常见的无响应卡顿、进程崩溃以及某些硬件故障导致的错误。在集群作业中，它实现了作业内自动重启：故障发生时无需重新排队申请计算节点资源，ft_launcher会在原有作业上下文中重新拉起进程，最大程度减少停机时间。此外，NVRx配合其Checkpoint组件，能够做到快速且频繁地保存训练状态，使得无论是挂起还是节点杀死，训练都可从最近一次checkpoint恢复，避免长时间计算成果的丢失。NVRx还提供系统级健康检查（如节点健康服务、存储系统连通性检查等）来预先发现潜在问题。整体而言，其设计理念是在不中断整个作业的前提下，“早检测、快恢复”，从而提高大规模训练的健壮性和有效运行时间。</p></li>
 </ul>
@@ -327,7 +333,7 @@
 <li><strong>fully_reshardable（完全重分片格式）</strong>：采用更通用的完整重分片方案，允许Checkpoint在任意并行配置变化的情况下被加载。也就是说，不论数据并行或模型并行度如何改变，此格式的优化器状态都提供了所需的信息以重新分布参数。它的实现通常需要在Checkpoint中保存更多元数据或全尺寸的优化器状态，以支持跨配置的重组。因此代价是保存/加载速度较dp_reshardable略慢，占用空间也可能更大。fully_reshardable适用于需要在训练中改变模型并行划分的场景。例如，当计划在中途增减GPU或者调整并行策略时，可在切换配置前启用此格式保存一次Checkpoint，然后在新配置下成功加载。实际用法上，通过设置特定开关（如命令行参数–dist-ckpt-optim-fully-reshardable）来启用完全重分片模式。一旦完成配置转换并保存至少一个checkpoint后，若后续训练不再需要频繁转换，也可以关闭此模式恢复为更高效的dp_reshardable格式继续训练。</li>
 </ul></li>
 <li><p><strong>原理优势</strong>：综合来看，分布式Checkpoint机制通过上述两种格式兼顾了性能与灵活性。建议的工作流程是：平时采用高速的默认格式进行定期checkpoint；当需要调整并行度（比如扩容作业）时，切换到fully_reshardable格式保存一次checkpoint，再用新配置加载，确保模型正确迁移；之后可再切换回默认格式以继续训练、提高性能。这一机制的优势在于：(1) 弹性扩展：允许深度学习训练在不同硬件规模之间迁移，方便在资源变化时扩展或收缩作业规模，而模型进度不受影响；(2) 容错恢复：在某些需要转移到新节点（比如原节点故障更换）时，可利用fully_reshardable确保checkpoint在新硬件上无障碍恢复，从而增强容错性；(3) 性能优化：在不改变并行度时使用dp_reshardable尽量减少Checkpoint开销，不影响训练效率。总之，NVRx的分布式Checkpoint通过可重分片的优化器状态设计，实现了“跨并行配置可加载”这一突破性功能，为大规模分布式训练的弹性伸缩和健壮恢复提供了坚实支撑。</p></li>
-<li><p>优化器状态格式 dp_reshardable vs fully_reshardable 优劣对比： dp_reshardable (默认) 优化器状态按数据并行度切分存储，Checkpoint体积小，保存/加载快。适用于训练过程中并行配置固定的场景。 不支持模型并行度调整快：读写开销低。 fully_reshardable 优化器状态完整存储，含全量元数据，能适配任意并行划分变化[51]。在需要改变并行度（增减GPU或调整模型并行）时使用，以确保Checkpoint可用。 支持任意并行配置变化较慢：读写耗时和开销更高。</p></li>
+<li><p>优化器状态格式 dp_reshardable vs fully_reshardable 优劣对比： dp_reshardable (默认) 优化器状态按数据并行度切分存储，Checkpoint体积小，保存/加载快。适用于训练过程中并行配置固定的场景。 不支持模型并行度调整快：读写开销低。 fully_reshardable 优化器状态完整存储，含全量元数据，能适配任意并行划分变化。在需要改变并行度（增减GPU或调整模型并行）时使用，以确保Checkpoint可用。 支持任意并行配置变化较慢：读写耗时和开销更高。</p></li>
 </ul>
 <hr />
 <h2 id="参考文献-链接">参考文献 / 链接</h2>
@@ -360,7 +366,10 @@
     <a href="/2025/12/28/paper/reducing_energy/" rel="prev" title="Reducing Energy Bloat in Large Model Training">
       <i class="fa fa-chevron-left"></i> Reducing Energy Bloat in Large Model Training
     </a></div>
-      <div class="post-nav-item"></div>
+      <div class="post-nav-item">
+    <a href="/2026/01/16/paper/AMPeD/" rel="next" title="AMPeD: An Analytical Model for Performance in Distributed Training of Transformers">
+      AMPeD: An Analytical Model for Performance in Distributed Training of Transformers <i class="fa fa-chevron-right"></i>
+    </a></div>
     </div>
       </footer>
     
@@ -432,7 +441,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">17</span>
+          <span class="site-state-item-count">18</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
