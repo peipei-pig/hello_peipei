@@ -119,14 +119,24 @@
     <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
 
   </li>
-        <li class="menu-item menu-item-分类">
+        <li class="menu-item menu-item-训练">
 
-    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+    <a href="/categories/%E8%AE%BA%E6%96%87%E9%98%85%E8%AF%BB/" rel="section"><i class="fa fa-dumbbell fa-fw"></i>训练</a>
 
   </li>
-        <li class="menu-item menu-item-标签">
+        <li class="menu-item menu-item-推理">
 
-    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+    <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E5%9F%BA%E7%A1%80/" rel="section"><i class="fa fa-microchip fa-fw"></i>推理</a>
+
+  </li>
+        <li class="menu-item menu-item-工具">
+
+    <a href="/tags/shell/" rel="section"><i class="fa fa-toolbox fa-fw"></i>工具</a>
+
+  </li>
+        <li class="menu-item menu-item-杂项">
+
+    <a href="/categories/%E5%85%B6%E5%AE%83/" rel="section"><i class="fa fa-box-open fa-fw"></i>杂项</a>
 
   </li>
         <li class="menu-item menu-item-归档">
@@ -186,6 +196,19 @@
   </span>
 </div>
 
+<script defer src="https://events.vercount.one/js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var nodes = document.querySelectorAll('.post-meta-reading[data-reading-symbols]');
+    nodes.forEach(function (node) {
+      var symbols = parseInt(node.getAttribute('data-reading-symbols') || '0', 10);
+      var minutes = Math.max(1, Math.ceil(symbols / 500));
+      var text = node.querySelector('.post-reading-time-value');
+      if (text) text.textContent = minutes + ' 分钟';
+    });
+  });
+</script>
+
 </div>
     </header>
 
@@ -226,32 +249,16 @@
         </h1>
 
         <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-              
-
-              <time title="Created: 2025-11-23 14:53:36 / Modified: 15:12:37" itemprop="dateCreated datePublished" datetime="2025-11-23T14:53:36+08:00">2025-11-23</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AE%BA%E6%96%87%E9%98%85%E8%AF%BB/" itemprop="url" rel="index"><span itemprop="name">论文阅读</span></a>
-                </span>
-            </span>
 
           
 
-<span class="post-meta-item">
-  <span class="post-meta-item-icon"><i class="fa fa-eye"></i></span>
-  <span class="post-meta-item-text">Views:</span>
-  <span id="vercount_value_page_pv">0</span>  
-</span>
+
+
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon"><i class="fa fa-eye"></i></span>
+    <span class="post-meta-item-text">Views:</span>
+    <span id="vercount_value_page_pv">0</span>
+  </span>
 
 
             <div class="post-description">大规模 Transformer 激活重计算的系统级优化</div>
@@ -1141,7 +1148,7 @@ M_{\text{selective}} =
     
 
   
-<script defer src="https://events.vercount.one/js"></script>
+
 
 </body>
 </html>

@@ -117,14 +117,24 @@
     <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
 
   </li>
-        <li class="menu-item menu-item-分类">
+        <li class="menu-item menu-item-训练">
 
-    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+    <a href="/categories/%E8%AE%BA%E6%96%87%E9%98%85%E8%AF%BB/" rel="section"><i class="fa fa-dumbbell fa-fw"></i>训练</a>
 
   </li>
-        <li class="menu-item menu-item-标签">
+        <li class="menu-item menu-item-推理">
 
-    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+    <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E5%9F%BA%E7%A1%80/" rel="section"><i class="fa fa-microchip fa-fw"></i>推理</a>
+
+  </li>
+        <li class="menu-item menu-item-工具">
+
+    <a href="/tags/shell/" rel="section"><i class="fa fa-toolbox fa-fw"></i>工具</a>
+
+  </li>
+        <li class="menu-item menu-item-杂项">
+
+    <a href="/categories/%E5%85%B6%E5%AE%83/" rel="section"><i class="fa fa-box-open fa-fw"></i>杂项</a>
 
   </li>
         <li class="menu-item menu-item-归档">
@@ -184,6 +194,19 @@
   </span>
 </div>
 
+<script defer src="https://events.vercount.one/js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var nodes = document.querySelectorAll('.post-meta-reading[data-reading-symbols]');
+    nodes.forEach(function (node) {
+      var symbols = parseInt(node.getAttribute('data-reading-symbols') || '0', 10);
+      var minutes = Math.max(1, Math.ceil(symbols / 500));
+      var text = node.querySelector('.post-reading-time-value');
+      if (text) text.textContent = minutes + ' 分钟';
+    });
+  });
+</script>
+
 </div>
     </header>
 
@@ -202,6 +225,10 @@
 
           <div class="content index posts-expand">
             
+
+  <section class="home-block home-block-latest">
+    <h2 class="home-block-title">最新文章</h2>
+  </section>
       
   
   
@@ -224,26 +251,26 @@
         </h2>
 
         <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-              
-
-              <time title="Created: 2026-03-01 16:36:12 / Modified: 16:38:10" itemprop="dateCreated datePublished" datetime="2026-03-01T16:36:12+08:00">2026-03-01</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%85%B6%E5%AE%83/" itemprop="url" rel="index"><span itemprop="name">其它</span></a>
-                </span>
-            </span>
 
           
+
+  
+  <span class="post-meta-item post-meta-reading" data-reading-symbols="17215">
+    <span class="post-meta-item-icon"><i class="far fa-clock"></i></span>
+    <span class="post-meta-item-text">阅读约</span>
+    <span class="post-reading-time-value">1 分钟</span>
+  </span>
+
+  
+    <span class="post-meta-item post-meta-tags-lite">
+      <span class="post-meta-item-icon"><i class="fa fa-tags"></i></span>
+      
+        <a class="post-tag-link-lite" href="/tags/token/" rel="tag">token</a>
+      
+    </span>
+  
+
+
 
 
 
@@ -258,11 +285,6 @@
       
           <p>TileScale 与 TileLang</p>
           <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2026/03/01/other/tilescale_tilelang/">
-                Read more &raquo;
-              </a>
-            </div>
           <!--/noindex-->
         
       
@@ -301,26 +323,26 @@
         </h2>
 
         <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-              
-
-              <time title="Created: 2026-01-16 19:52:13 / Modified: 19:54:01" itemprop="dateCreated datePublished" datetime="2026-01-16T19:52:13+08:00">2026-01-16</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AE%BA%E6%96%87%E9%98%85%E8%AF%BB/" itemprop="url" rel="index"><span itemprop="name">论文阅读</span></a>
-                </span>
-            </span>
 
           
+
+  
+  <span class="post-meta-item post-meta-reading" data-reading-symbols="20426">
+    <span class="post-meta-item-icon"><i class="far fa-clock"></i></span>
+    <span class="post-meta-item-text">阅读约</span>
+    <span class="post-reading-time-value">1 分钟</span>
+  </span>
+
+  
+    <span class="post-meta-item post-meta-tags-lite">
+      <span class="post-meta-item-icon"><i class="fa fa-tags"></i></span>
+      
+        <a class="post-tag-link-lite" href="/tags/paper/" rel="tag">paper</a>
+      
+    </span>
+  
+
+
 
 
 
@@ -335,11 +357,6 @@
       
           <p>AMPeD：Transformer分布式训练性能分析模型</p>
           <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2026/01/16/paper/AMPeD/">
-                Read more &raquo;
-              </a>
-            </div>
           <!--/noindex-->
         
       
@@ -378,32 +395,26 @@
         </h2>
 
         <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2026-01-14 20:20:19" itemprop="dateCreated datePublished" datetime="2026-01-14T20:20:19+08:00">2026-01-14</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2026-01-16 19:50:23" itemprop="dateModified" datetime="2026-01-16T19:50:23+08:00">2026-01-16</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%85%B6%E5%AE%83/" itemprop="url" rel="index"><span itemprop="name">其它</span></a>
-                </span>
-            </span>
 
           
+
+  
+  <span class="post-meta-item post-meta-reading" data-reading-symbols="9145">
+    <span class="post-meta-item-icon"><i class="far fa-clock"></i></span>
+    <span class="post-meta-item-text">阅读约</span>
+    <span class="post-reading-time-value">1 分钟</span>
+  </span>
+
+  
+    <span class="post-meta-item post-meta-tags-lite">
+      <span class="post-meta-item-icon"><i class="fa fa-tags"></i></span>
+      
+        <a class="post-tag-link-lite" href="/tags/NVRx/" rel="tag">NVRx</a>
+      
+    </span>
+  
+
+
 
 
 
@@ -418,11 +429,6 @@
       
           <p>介绍NVRx的基础知识</p>
           <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2026/01/14/other/nvrx/">
-                Read more &raquo;
-              </a>
-            </div>
           <!--/noindex-->
         
       
@@ -461,26 +467,26 @@
         </h2>
 
         <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-              
-
-              <time title="Created: 2025-12-28 15:36:30 / Modified: 15:41:35" itemprop="dateCreated datePublished" datetime="2025-12-28T15:36:30+08:00">2025-12-28</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AE%BA%E6%96%87%E9%98%85%E8%AF%BB/" itemprop="url" rel="index"><span itemprop="name">论文阅读</span></a>
-                </span>
-            </span>
 
           
+
+  
+  <span class="post-meta-item post-meta-reading" data-reading-symbols="13759">
+    <span class="post-meta-item-icon"><i class="far fa-clock"></i></span>
+    <span class="post-meta-item-text">阅读约</span>
+    <span class="post-reading-time-value">1 分钟</span>
+  </span>
+
+  
+    <span class="post-meta-item post-meta-tags-lite">
+      <span class="post-meta-item-icon"><i class="fa fa-tags"></i></span>
+      
+        <a class="post-tag-link-lite" href="/tags/paper/" rel="tag">paper</a>
+      
+    </span>
+  
+
+
 
 
 
@@ -495,11 +501,6 @@
       
           <p>减少大模型训练中的能源浪费：Perseus 系统详解</p>
           <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2025/12/28/paper/reducing_energy/">
-                Read more &raquo;
-              </a>
-            </div>
           <!--/noindex-->
         
       
@@ -538,26 +539,26 @@
         </h2>
 
         <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-              
-
-              <time title="Created: 2025-12-28 14:37:57 / Modified: 14:43:39" itemprop="dateCreated datePublished" datetime="2025-12-28T14:37:57+08:00">2025-12-28</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AE%BA%E6%96%87%E9%98%85%E8%AF%BB/" itemprop="url" rel="index"><span itemprop="name">论文阅读</span></a>
-                </span>
-            </span>
 
           
+
+  
+  <span class="post-meta-item post-meta-reading" data-reading-symbols="23030">
+    <span class="post-meta-item-icon"><i class="far fa-clock"></i></span>
+    <span class="post-meta-item-text">阅读约</span>
+    <span class="post-reading-time-value">1 分钟</span>
+  </span>
+
+  
+    <span class="post-meta-item post-meta-tags-lite">
+      <span class="post-meta-item-icon"><i class="fa fa-tags"></i></span>
+      
+        <a class="post-tag-link-lite" href="/tags/paper/" rel="tag">paper</a>
+      
+    </span>
+  
+
+
 
 
 
@@ -572,11 +573,6 @@
       
           <p>Rail-only：面向万亿参数 LLM 训练的低成本高性能网络架构</p>
           <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2025/12/28/paper/rail_only/">
-                Read more &raquo;
-              </a>
-            </div>
           <!--/noindex-->
         
       
@@ -615,26 +611,26 @@
         </h2>
 
         <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-              
-
-              <time title="Created: 2025-11-23 14:53:36 / Modified: 15:12:37" itemprop="dateCreated datePublished" datetime="2025-11-23T14:53:36+08:00">2025-11-23</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AE%BA%E6%96%87%E9%98%85%E8%AF%BB/" itemprop="url" rel="index"><span itemprop="name">论文阅读</span></a>
-                </span>
-            </span>
 
           
+
+  
+  <span class="post-meta-item post-meta-reading" data-reading-symbols="19082">
+    <span class="post-meta-item-icon"><i class="far fa-clock"></i></span>
+    <span class="post-meta-item-text">阅读约</span>
+    <span class="post-reading-time-value">1 分钟</span>
+  </span>
+
+  
+    <span class="post-meta-item post-meta-tags-lite">
+      <span class="post-meta-item-icon"><i class="fa fa-tags"></i></span>
+      
+        <a class="post-tag-link-lite" href="/tags/paper/" rel="tag">paper</a>
+      
+    </span>
+  
+
+
 
 
 
@@ -649,11 +645,6 @@
       
           <p>大规模 Transformer 激活重计算的系统级优化</p>
           <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2025/11/23/paper/reducing_activation_recomputation/">
-                Read more &raquo;
-              </a>
-            </div>
           <!--/noindex-->
         
       
@@ -670,313 +661,28 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
-    <link itemprop="mainEntityOfPage" href="https://yaopepe.com/2025/11/23/paper/efficient_large_scale/">
 
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="PePe">
-      <meta itemprop="description" content="做正确的事">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="果冻甜甜的">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2025/11/23/paper/efficient_large_scale/" class="post-title-link" itemprop="url">Efficient Large-Scale Language Model Training on GPU Clusters Using Megatron-LM</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-              
-
-              <time title="Created: 2025-11-23 11:46:23 / Modified: 14:29:45" itemprop="dateCreated datePublished" datetime="2025-11-23T11:46:23+08:00">2025-11-23</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AE%BA%E6%96%87%E9%98%85%E8%AF%BB/" itemprop="url" rel="index"><span itemprop="name">论文阅读</span></a>
-                </span>
-            </span>
-
-          
-
-
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>Megatron-LM 三维并行实践解析</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2025/11/23/paper/efficient_large_scale/">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
+  <section class="home-block home-block-topics">
+    <h2 class="home-block-title">专题合集</h2>
+    <div class="topic-grid">
+      <a class="topic-card" href="/categories/%E8%AE%BA%E6%96%87%E9%98%85%E8%AF%BB/">
+        <span class="topic-card-title">训练</span>
+        <span class="topic-card-desc">训练策略与论文拆解</span>
+      </a>
+      <a class="topic-card" href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E5%9F%BA%E7%A1%80/">
+        <span class="topic-card-title">推理</span>
+        <span class="topic-card-desc">分布式与推理流程实践</span>
+      </a>
+      <a class="topic-card" href="/tags/shell/">
+        <span class="topic-card-title">工具</span>
+        <span class="topic-card-desc">命令、脚本与效率工具</span>
+      </a>
+      <a class="topic-card" href="/categories/%E5%85%B6%E5%AE%83/">
+        <span class="topic-card-title">杂项</span>
+        <span class="topic-card-desc">零散问题与经验记录</span>
+      </a>
     </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
-    <link itemprop="mainEntityOfPage" href="https://yaopepe.com/2025/11/22/paper/InstructCoder/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="PePe">
-      <meta itemprop="description" content="做正确的事">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="果冻甜甜的">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2025/11/22/paper/InstructCoder/" class="post-title-link" itemprop="url">InstructCoder: Instruction Tuning Large Language Models for Code Editing</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-              
-
-              <time title="Created: 2025-11-22 19:35:52 / Modified: 20:25:46" itemprop="dateCreated datePublished" datetime="2025-11-22T19:35:52+08:00">2025-11-22</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AE%BA%E6%96%87%E9%98%85%E8%AF%BB/" itemprop="url" rel="index"><span itemprop="name">论文阅读</span></a>
-                </span>
-            </span>
-
-          
-
-
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>InstructCoder：面向代码编辑的指令微调实践解析</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2025/11/22/paper/InstructCoder/">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
-    <link itemprop="mainEntityOfPage" href="https://yaopepe.com/2025/11/22/paper/megatron_lm/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="PePe">
-      <meta itemprop="description" content="做正确的事">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="果冻甜甜的">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2025/11/22/paper/megatron_lm/" class="post-title-link" itemprop="url">Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-              
-
-              <time title="Created: 2025-11-22 17:50:24 / Modified: 19:05:21" itemprop="dateCreated datePublished" datetime="2025-11-22T17:50:24+08:00">2025-11-22</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E8%AE%BA%E6%96%87%E9%98%85%E8%AF%BB/" itemprop="url" rel="index"><span itemprop="name">论文阅读</span></a>
-                </span>
-            </span>
-
-          
-
-
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>Megatron-LM：使用模型并行训练数十亿参数的语言模型</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2025/11/22/paper/megatron_lm/">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
-    <link itemprop="mainEntityOfPage" href="https://yaopepe.com/2025/09/07/other/token/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="PePe">
-      <meta itemprop="description" content="做正确的事">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="果冻甜甜的">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2025/09/07/other/token/" class="post-title-link" itemprop="url">token 简介</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2025-09-07 16:34:08" itemprop="dateCreated datePublished" datetime="2025-09-07T16:34:08+08:00">2025-09-07</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%85%B6%E5%AE%83/" itemprop="url" rel="index"><span itemprop="name">其它</span></a>
-                </span>
-            </span>
-
-          
-
-
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>介绍token的基础知识</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2025/09/07/other/token/">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
+  </section>
 
   
   <nav class="pagination">
@@ -1205,7 +911,7 @@
     
 
   
-<script defer src="https://events.vercount.one/js"></script>
+
 
 </body>
 </html>

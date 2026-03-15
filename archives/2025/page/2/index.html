@@ -117,14 +117,24 @@
     <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
 
   </li>
-        <li class="menu-item menu-item-分类">
+        <li class="menu-item menu-item-训练">
 
-    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+    <a href="/categories/%E8%AE%BA%E6%96%87%E9%98%85%E8%AF%BB/" rel="section"><i class="fa fa-dumbbell fa-fw"></i>训练</a>
 
   </li>
-        <li class="menu-item menu-item-标签">
+        <li class="menu-item menu-item-推理">
 
-    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+    <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E5%9F%BA%E7%A1%80/" rel="section"><i class="fa fa-microchip fa-fw"></i>推理</a>
+
+  </li>
+        <li class="menu-item menu-item-工具">
+
+    <a href="/tags/shell/" rel="section"><i class="fa fa-toolbox fa-fw"></i>工具</a>
+
+  </li>
+        <li class="menu-item menu-item-杂项">
+
+    <a href="/categories/%E5%85%B6%E5%AE%83/" rel="section"><i class="fa fa-box-open fa-fw"></i>杂项</a>
 
   </li>
         <li class="menu-item menu-item-归档">
@@ -183,6 +193,19 @@
     <span id="total_posts_count">19</span>
   </span>
 </div>
+
+<script defer src="https://events.vercount.one/js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var nodes = document.querySelectorAll('.post-meta-reading[data-reading-symbols]');
+    nodes.forEach(function (node) {
+      var symbols = parseInt(node.getAttribute('data-reading-symbols') || '0', 10);
+      var minutes = Math.max(1, Math.ceil(symbols / 500));
+      var text = node.querySelector('.post-reading-time-value');
+      if (text) text.textContent = minutes + ' 分钟';
+    });
+  });
+</script>
 
 </div>
     </header>
@@ -518,7 +541,7 @@
   
 
   
-<script defer src="https://events.vercount.one/js"></script>
+
 
 </body>
 </html>
