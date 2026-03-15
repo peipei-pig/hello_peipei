@@ -1196,7 +1196,7 @@ pre .javascript .function {
 }
 .links-of-author a::before,
 .links-of-author span.exturl::before {
-  background: #226aff;
+  background: #304599;
   border-radius: 50%;
   content: ' ';
   display: inline-block;
@@ -2775,6 +2775,14 @@ hr {
 .sidebar .site-state-item-name,
 .sidebar .site-state-item-count {
   color: rgba(0,0,0,0.72) !important;
+}
+/* Keep only TOC in sidebar, remove overview content */
+.sidebar-nav-overview,
+.site-overview-wrap {
+  display: none !important;
+}
+.sidebar-nav .sidebar-nav-toc {
+  width: 100% !important;
 }
 @media (max-width: 767px) {
   .main-menu {
