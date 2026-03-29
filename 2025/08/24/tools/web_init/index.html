@@ -182,6 +182,33 @@
     </div>
   </div>
 
+<div class="site-meta-counts">
+  <span class="post-meta-item">
+    <i class="fa fa-eye"></i>
+    <span class="post-meta-item-text">总访问量</span>
+    <span id="vercount_value_site_pv">0</span>
+  </span>
+
+  <span class="post-meta-item">
+    <i class="fa fa-file"></i>
+    <span class="post-meta-item-text">总文章数</span>
+    <span id="total_posts_count">21</span>
+  </span>
+</div>
+
+<script defer src="https://events.vercount.one/js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var nodes = document.querySelectorAll('.post-meta-reading[data-reading-symbols]');
+    nodes.forEach(function (node) {
+      var symbols = parseInt(node.getAttribute('data-reading-symbols') || '0', 10);
+      var minutes = Math.max(1, Math.ceil(symbols / 500));
+      var text = node.querySelector('.post-reading-time-value');
+      if (text) text.textContent = minutes + ' 分钟';
+    });
+  });
+</script>
+
 </div>
     </header>
 
@@ -389,20 +416,6 @@
     
     
     
-<section class="post-guide">
-  <h3>继续阅读</h3>
-  <p>按专题路径继续学习，或直接订阅更新。</p>
-  <div class="post-guide-links">
-    <a href="/paths/inference/">推理路径</a>
-    <a href="/paths/training/">训练路径</a>
-    <a href="/paths/tools/">工具路径</a>
-    <a href="/tutorials/">学习总览</a>
-    <a href="/archives/">全部文章</a>
-    <a href="/atom.xml">订阅 Atom</a>
-    <a href="/rss2.xml">订阅 RSS</a>
-  </div>
-</section>
-
 
       <footer class="post-footer">
 
@@ -477,7 +490,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%89%E8%A3%85-hexo-%E7%8E%AF%E5%A2%83"><span class="nav-number">1.</span> <span class="nav-text">1. 安装 Hexo 环境</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AE%89%E8%A3%85-node.js-%E5%92%8C-npm"><span class="nav-number">1.1.</span> <span class="nav-text">安装 Node.js 和 npm：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AE%89%E8%A3%85-git"><span class="nav-number">1.2.</span> <span class="nav-text">安装 Git：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AE%89%E8%A3%85-hexo-cli"><span class="nav-number">1.3.</span> <span class="nav-text">安装 Hexo CLI：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96-hexo-%E5%8D%9A%E5%AE%A2"><span class="nav-number">1.4.</span> <span class="nav-text">初始化 Hexo 博客：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%BC%80%E5%90%AF%E9%98%B2%E7%81%AB%E5%A2%99"><span class="nav-number">1.5.</span> <span class="nav-text">开启防火墙：</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%80%89%E6%8B%A9%E4%B8%8E%E9%85%8D%E7%BD%AE-hexo-%E4%B8%BB%E9%A2%98"><span class="nav-number">2.</span> <span class="nav-text">2. 选择与配置 Hexo 主题</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%8E%B7%E5%8F%96-next-%E4%B8%BB%E9%A2%98"><span class="nav-number">2.1.</span> <span class="nav-text">获取 NexT 主题：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%BF%AE%E6%94%B9%E4%B8%BB%E9%A2%98%E9%85%8D%E7%BD%AE"><span class="nav-number">2.2.</span> <span class="nav-text">修改主题配置：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AE%89%E8%A3%85%E4%B8%BB%E9%A2%98%E4%BE%9D%E8%B5%96"><span class="nav-number">2.3.</span> <span class="nav-text">安装主题依赖：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%94%9F%E6%88%90%E5%B8%B8%E7%94%A8%E9%A1%B5%E9%9D%A2"><span class="nav-number">2.4.</span> <span class="nav-text">生成常用页面：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AF%BC%E8%88%AA%E6%A0%8F%E8%8F%9C%E5%8D%95%E5%AE%9A%E5%88%B6"><span class="nav-number">2.5.</span> <span class="nav-text">导航栏菜单定制：</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%92%B0%E5%86%99%E4%B8%8E%E7%AE%A1%E7%90%86%E5%8D%9A%E5%AE%A2%E5%86%85%E5%AE%B9"><span class="nav-number">3.</span> <span class="nav-text">3. 撰写与管理博客内容</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%96%B0%E5%BB%BA%E5%8D%9A%E6%96%87"><span class="nav-number">3.1.</span> <span class="nav-text">新建博文：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8-markdown-%E6%92%B0%E5%86%99%E5%86%85%E5%AE%B9"><span class="nav-number">3.2.</span> <span class="nav-text">使用 Markdown 撰写内容：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%8F%92%E5%85%A5%E5%9B%BE%E7%89%87%E5%92%8C%E8%B5%84%E6%BA%90"><span class="nav-number">3.3.</span> <span class="nav-text">插入图片和资源：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%8D%89%E7%A8%BF%E7%AE%A1%E7%90%86%E4%B8%8E%E5%8F%91%E5%B8%83"><span class="nav-number">3.4.</span> <span class="nav-text">草稿管理与发布：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%96%87%E7%AB%A0%E7%BB%93%E6%9E%84%E5%92%8C%E5%88%86%E9%A1%B5"><span class="nav-number">3.5.</span> <span class="nav-text">文章结构和分页：</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#seo-%E4%BC%98%E5%8C%96"><span class="nav-number">4.</span> <span class="nav-text">4. SEO 优化</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%AB%99%E7%82%B9%E6%A0%87%E9%A2%98%E4%B8%8E%E5%85%83%E4%BF%A1%E6%81%AF"><span class="nav-number">4.1.</span> <span class="nav-text">站点标题与元信息：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%93%BE%E6%8E%A5%E4%BC%98%E5%8C%96"><span class="nav-number">4.2.</span> <span class="nav-text">链接优化：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%AB%99%E7%82%B9%E5%9C%B0%E5%9B%BE"><span class="nav-number">4.3.</span> <span class="nav-text">站点地图：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%8D%8F%E8%AE%AE"><span class="nav-number">4.4.</span> <span class="nav-text">机器人协议：</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8D%9A%E5%AE%A2%E9%83%A8%E7%BD%B2"><span class="nav-number">5.</span> <span class="nav-text">5. 博客部署</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%9C%AC%E5%9C%B0%E7%94%9F%E6%88%90%E9%9D%99%E6%80%81%E6%96%87%E4%BB%B6"><span class="nav-number">5.1.</span> <span class="nav-text">本地生成静态文件：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#nginx-%E9%83%A8%E7%BD%B2%E9%9D%99%E6%80%81%E7%AB%99%E7%82%B9"><span class="nav-number">5.2.</span> <span class="nav-text">Nginx 部署静态站点：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE-https%E5%8F%AF%E9%80%89"><span class="nav-number">5.3.</span> <span class="nav-text">配置 HTTPS（可选）：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#hexo-deploy-%E8%87%AA%E5%8A%A8%E9%83%A8%E7%BD%B2"><span class="nav-number">5.4.</span> <span class="nav-text">Hexo Deploy 自动部署：</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BB%B4%E6%8A%A4%E4%B8%8E%E4%BC%98%E5%8C%96"><span class="nav-number">6.</span> <span class="nav-text">6. 维护与优化</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%89%E8%A3%85-hexo-%E7%8E%AF%E5%A2%83"><span class="nav-number">1.</span> <span class="nav-text">1. 安装 Hexo 环境</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AE%89%E8%A3%85-node.js-%E5%92%8C-npm"><span class="nav-number">1.1.</span> <span class="nav-text">安装 Node.js 和 npm：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AE%89%E8%A3%85-git"><span class="nav-number">1.2.</span> <span class="nav-text">安装 Git：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AE%89%E8%A3%85-hexo-cli"><span class="nav-number">1.3.</span> <span class="nav-text">安装 Hexo CLI：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96-hexo-%E5%8D%9A%E5%AE%A2"><span class="nav-number">1.4.</span> <span class="nav-text">初始化 Hexo 博客：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%BC%80%E5%90%AF%E9%98%B2%E7%81%AB%E5%A2%99"><span class="nav-number">1.5.</span> <span class="nav-text">开启防火墙：</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%80%89%E6%8B%A9%E4%B8%8E%E9%85%8D%E7%BD%AE-hexo-%E4%B8%BB%E9%A2%98"><span class="nav-number">2.</span> <span class="nav-text">2. 选择与配置 Hexo 主题</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%8E%B7%E5%8F%96-next-%E4%B8%BB%E9%A2%98"><span class="nav-number">2.1.</span> <span class="nav-text">获取 NexT 主题：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%BF%AE%E6%94%B9%E4%B8%BB%E9%A2%98%E9%85%8D%E7%BD%AE"><span class="nav-number">2.2.</span> <span class="nav-text">修改主题配置：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AE%89%E8%A3%85%E4%B8%BB%E9%A2%98%E4%BE%9D%E8%B5%96"><span class="nav-number">2.3.</span> <span class="nav-text">安装主题依赖：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%94%9F%E6%88%90%E5%B8%B8%E7%94%A8%E9%A1%B5%E9%9D%A2"><span class="nav-number">2.4.</span> <span class="nav-text">生成常用页面：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AF%BC%E8%88%AA%E6%A0%8F%E8%8F%9C%E5%8D%95%E5%AE%9A%E5%88%B6"><span class="nav-number">2.5.</span> <span class="nav-text">导航栏菜单定制：</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%92%B0%E5%86%99%E4%B8%8E%E7%AE%A1%E7%90%86%E5%8D%9A%E5%AE%A2%E5%86%85%E5%AE%B9"><span class="nav-number">3.</span> <span class="nav-text">3. 撰写与管理博客内容</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%96%B0%E5%BB%BA%E5%8D%9A%E6%96%87"><span class="nav-number">3.1.</span> <span class="nav-text">新建博文：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8-markdown-%E6%92%B0%E5%86%99%E5%86%85%E5%AE%B9"><span class="nav-number">3.2.</span> <span class="nav-text">使用 Markdown 撰写内容：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%8F%92%E5%85%A5%E5%9B%BE%E7%89%87%E5%92%8C%E8%B5%84%E6%BA%90"><span class="nav-number">3.3.</span> <span class="nav-text">插入图片和资源：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%8D%89%E7%A8%BF%E7%AE%A1%E7%90%86%E4%B8%8E%E5%8F%91%E5%B8%83"><span class="nav-number">3.4.</span> <span class="nav-text">草稿管理与发布：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%96%87%E7%AB%A0%E7%BB%93%E6%9E%84%E5%92%8C%E5%88%86%E9%A1%B5"><span class="nav-number">3.5.</span> <span class="nav-text">文章结构和分页：</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#seo-%E4%BC%98%E5%8C%96"><span class="nav-number">4.</span> <span class="nav-text">4. SEO 优化</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%AB%99%E7%82%B9%E6%A0%87%E9%A2%98%E4%B8%8E%E5%85%83%E4%BF%A1%E6%81%AF"><span class="nav-number">4.1.</span> <span class="nav-text">站点标题与元信息：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%93%BE%E6%8E%A5%E4%BC%98%E5%8C%96"><span class="nav-number">4.2.</span> <span class="nav-text">链接优化：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%AB%99%E7%82%B9%E5%9C%B0%E5%9B%BE"><span class="nav-number">4.3.</span> <span class="nav-text">站点地图：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%8D%8F%E8%AE%AE"><span class="nav-number">4.4.</span> <span class="nav-text">机器人协议：</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8D%9A%E5%AE%A2%E9%83%A8%E7%BD%B2"><span class="nav-number">5.</span> <span class="nav-text">5. 博客部署</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%9C%AC%E5%9C%B0%E7%94%9F%E6%88%90%E9%9D%99%E6%80%81%E6%96%87%E4%BB%B6"><span class="nav-number">5.1.</span> <span class="nav-text">本地生成静态文件：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#nginx-%E9%83%A8%E7%BD%B2%E9%9D%99%E6%80%81%E7%AB%99%E7%82%B9"><span class="nav-number">5.2.</span> <span class="nav-text">Nginx 部署静态站点：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE-https%E5%8F%AF%E9%80%89"><span class="nav-number">5.3.</span> <span class="nav-text">配置 HTTPS（可选）：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#hexo-deploy-%E8%87%AA%E5%8A%A8%E9%83%A8%E7%BD%B2"><span class="nav-number">5.4.</span> <span class="nav-text">Hexo Deploy 自动部署：</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E6%8E%A8%E9%80%81%E5%88%B0%E8%BF%9C%E7%A8%8B%E6%89%98%E7%AE%A1"><span class="nav-number">5.4.1.</span> <span class="nav-text">推送到远程托管：</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E6%8E%A8%E9%80%81%E5%88%B0%E8%87%AA%E5%B7%B1%E6%9C%8D%E5%8A%A1%E5%99%A8"><span class="nav-number">5.4.2.</span> <span class="nav-text">推送到自己服务器：</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BB%B4%E6%8A%A4%E4%B8%8E%E4%BC%98%E5%8C%96"><span class="nav-number">6.</span> <span class="nav-text">6. 维护与优化</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -597,6 +610,7 @@
   
 
   
+
 
 </body>
 </html>

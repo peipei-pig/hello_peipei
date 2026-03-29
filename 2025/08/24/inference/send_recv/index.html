@@ -182,6 +182,33 @@
     </div>
   </div>
 
+<div class="site-meta-counts">
+  <span class="post-meta-item">
+    <i class="fa fa-eye"></i>
+    <span class="post-meta-item-text">总访问量</span>
+    <span id="vercount_value_site_pv">0</span>
+  </span>
+
+  <span class="post-meta-item">
+    <i class="fa fa-file"></i>
+    <span class="post-meta-item-text">总文章数</span>
+    <span id="total_posts_count">21</span>
+  </span>
+</div>
+
+<script defer src="https://events.vercount.one/js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var nodes = document.querySelectorAll('.post-meta-reading[data-reading-symbols]');
+    nodes.forEach(function (node) {
+      var symbols = parseInt(node.getAttribute('data-reading-symbols') || '0', 10);
+      var minutes = Math.max(1, Math.ceil(symbols / 500));
+      var text = node.querySelector('.post-reading-time-value');
+      if (text) text.textContent = minutes + ' 分钟';
+    });
+  });
+</script>
+
 </div>
     </header>
 
@@ -461,20 +488,6 @@
     
     
     
-<section class="post-guide">
-  <h3>继续阅读</h3>
-  <p>按专题路径继续学习，或直接订阅更新。</p>
-  <div class="post-guide-links">
-    <a href="/paths/inference/">推理路径</a>
-    <a href="/paths/training/">训练路径</a>
-    <a href="/paths/tools/">工具路径</a>
-    <a href="/tutorials/">学习总览</a>
-    <a href="/archives/">全部文章</a>
-    <a href="/atom.xml">订阅 Atom</a>
-    <a href="/rss2.xml">订阅 RSS</a>
-  </div>
-</section>
-
 
       <footer class="post-footer">
           <div class="post-tags">
@@ -672,6 +685,7 @@
   
 
   
+
 
 </body>
 </html>

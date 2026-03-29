@@ -181,6 +181,33 @@
     </div>
   </div>
 
+<div class="site-meta-counts">
+  <span class="post-meta-item">
+    <i class="fa fa-eye"></i>
+    <span class="post-meta-item-text">总访问量</span>
+    <span id="vercount_value_site_pv">0</span>
+  </span>
+
+  <span class="post-meta-item">
+    <i class="fa fa-file"></i>
+    <span class="post-meta-item-text">总文章数</span>
+    <span id="total_posts_count">21</span>
+  </span>
+</div>
+
+<script defer src="https://events.vercount.one/js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var nodes = document.querySelectorAll('.post-meta-reading[data-reading-symbols]');
+    nodes.forEach(function (node) {
+      var symbols = parseInt(node.getAttribute('data-reading-symbols') || '0', 10);
+      var minutes = Math.max(1, Math.ceil(symbols / 500));
+      var text = node.querySelector('.post-reading-time-value');
+      if (text) text.textContent = minutes + ' 分钟';
+    });
+  });
+</script>
+
 </div>
     </header>
 
@@ -410,6 +437,7 @@
   
 
   
+
 
 </body>
 </html>

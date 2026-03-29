@@ -180,6 +180,33 @@
     </div>
   </div>
 
+<div class="site-meta-counts">
+  <span class="post-meta-item">
+    <i class="fa fa-eye"></i>
+    <span class="post-meta-item-text">总访问量</span>
+    <span id="vercount_value_site_pv">0</span>
+  </span>
+
+  <span class="post-meta-item">
+    <i class="fa fa-file"></i>
+    <span class="post-meta-item-text">总文章数</span>
+    <span id="total_posts_count">21</span>
+  </span>
+</div>
+
+<script defer src="https://events.vercount.one/js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var nodes = document.querySelectorAll('.post-meta-reading[data-reading-symbols]');
+    nodes.forEach(function (node) {
+      var symbols = parseInt(node.getAttribute('data-reading-symbols') || '0', 10);
+      var minutes = Math.max(1, Math.ceil(symbols / 500));
+      var text = node.querySelector('.post-reading-time-value');
+      if (text) text.textContent = minutes + ' 分钟';
+    });
+  });
+</script>
+
 </div>
     </header>
 
@@ -305,6 +332,26 @@
       </div>
 
       <div class="post-title">
+          <a class="post-title-link" href="/2026/03/15/training/reducing_energy/" itemprop="url">
+            <span itemprop="name">Reducing Energy Bloat in Large Model Training</span>
+          </a>
+      </div>
+
+    </header>
+  </article>
+
+  <article itemscope itemtype="http://schema.org/Article">
+    <header class="post-header">
+
+      <div class="post-meta">
+        <time itemprop="dateCreated"
+              datetime="2026-03-15T11:04:34+08:00"
+              content="2026-03-15">
+          03-15
+        </time>
+      </div>
+
+      <div class="post-title">
           <a class="post-title-link" href="/2026/03/15/training/AMPeD/" itemprop="url">
             <span itemprop="name">AMPeD: An Analytical Model for Performance in Distributed Training of Transformers</span>
           </a>
@@ -327,26 +374,6 @@
       <div class="post-title">
           <a class="post-title-link" href="/2026/03/15/training/rail_only/" itemprop="url">
             <span itemprop="name">Rail-only: A Low-Cost High-Performance Network for Training LLMs with Trillion Parameters</span>
-          </a>
-      </div>
-
-    </header>
-  </article>
-
-  <article itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <div class="post-meta">
-        <time itemprop="dateCreated"
-              datetime="2026-03-15T11:04:34+08:00"
-              content="2026-03-15">
-          03-15
-        </time>
-      </div>
-
-      <div class="post-title">
-          <a class="post-title-link" href="/2026/03/15/training/reducing_energy/" itemprop="url">
-            <span itemprop="name">Reducing Energy Bloat in Large Model Training</span>
           </a>
       </div>
 
@@ -531,6 +558,7 @@
   
 
   
+
 
 </body>
 </html>
