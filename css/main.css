@@ -1196,7 +1196,7 @@ pre .javascript .function {
 }
 .links-of-author a::before,
 .links-of-author span.exturl::before {
-  background: #59ff4d;
+  background: #780650;
   border-radius: 50%;
   content: ' ';
   display: inline-block;
@@ -2797,4 +2797,8 @@ hr {
   .home-about {
     position: static;
   }
+}
+/* HTML articles are internal pages, even though NexT treats them as link posts. */
+.post-title-link-external[href^="/papers/"] .fa-external-link-alt {
+  display: none;
 }
